@@ -34,6 +34,7 @@ module.exports = {
       views: [],
       cards: [],
       textBlocks: [],
+      labels: [],
     };
 
     // To log
@@ -78,6 +79,16 @@ module.exports = {
         } else {
           console.warn(`Skipping line ${lineCount}: not a valid structure (type: ${parsed.type})`);
           continue;
+        }
+
+        if (blocks.board) {
+          const labelProperty = blocks.board.cardProperties?.find(
+            p => p.name === 'Рубрика' || p.type === 'multiSelect' // Sysblok-specific
+          );
+          if (labelProperty?.options) {
+            blocks.labels = labelProperty.options;
+            blocks.labelPropertyId = labelProperty.id; // Need this for card assignment
+          }
         }
 
         switch (block.type) {
