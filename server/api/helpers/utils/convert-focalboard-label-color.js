@@ -4,11 +4,7 @@
  */
 
 /**
- * convert-focalboard-label-color.js
- *
  * @description :: Converts Focalboard color names to Planka label colors.
- *
- * Location: server/api/helpers/utils/convert-focalboard-label-color.js
  */
 
 module.exports = {

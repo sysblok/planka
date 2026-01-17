@@ -3,7 +3,8 @@
  * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
  */
 
-const { POSITION_GAP } = require('../../../constants');
+// Focalboard property name for due date (will be looked up by name)
+const DUE_DATE_PROPERTY_NAME = 'Дедлайн';
 
 module.exports = {
   inputs: {
@@ -57,269 +58,94 @@ module.exports = {
     console.log(`Column property: ${columnProperty.name} (${columnProperty.type})`);
     console.log(`Total column options: ${columnProperty.options.length}`);
 
-    // =====================================================
-    // LABELS SECTION
-    // =====================================================
+    // Find the due date property by name
+    const dueDateProperty = boardBlock.cardProperties?.find(
+      (p) => p.name === DUE_DATE_PROPERTY_NAME && p.type === 'date'
+    );
+    const dueDatePropertyId = dueDateProperty?.id || null;
 
-    console.log('');
-    console.log('--- Creating Labels ---');
-
-    const labelIdByFocalboardLabelId = {};
-
-    if (focalboardLabels.length > 0) {
-      await Promise.all(
-        focalboardLabels.map(async (focalboardLabel, index) => {
-          const plankaColor = sails.helpers.utils.convertFocalboardLabelColor(focalboardLabel.color);
-
-          const { id } = await Label.qm.createOne({
-            boardId: inputs.board.id,
-            position: POSITION_GAP * (index + 1),
-            name: focalboardLabel.value || null,
-            color: plankaColor,
-          });
-
-          labelIdByFocalboardLabelId[focalboardLabel.id] = id;
-          console.log(`Created label: "${focalboardLabel.value}" (${focalboardLabel.color} → ${plankaColor})`);
-        }),
-      );
+    if (dueDatePropertyId) {
+      console.log(`Due date property found: "${DUE_DATE_PROPERTY_NAME}" (${dueDatePropertyId})`);
     } else {
-      console.log('No labels to import');
+      console.log(`Due date property "${DUE_DATE_PROPERTY_NAME}" not found, skipping due dates`);
     }
 
-    console.log(`Total labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
+    // =====================================================
+    // IMPORT LABELS
+    // =====================================================
+
+    const labelIdByFocalboardLabelId = await sails.helpers.boards.importFocalboardLabels(
+      inputs.board.id,
+      focalboardLabels,
+    );
 
     // =====================================================
     // LISTS SECTION
     // =====================================================
-    console.log('');
-    console.log('--- Creating Lists ---');
-    const visibleOptionIds = kanbanView.fields?.visibleOptionIds || [];
-    const listIdByOptionId = {};
+    const { listIdByOptionId, unorderedListId, unorderedListName } =
+      await sails.helpers.boards.importFocalboardLists(
+        inputs.board.id,
+        kanbanView.fields?.visibleOptionIds || [],
+        columnProperty.options,
+      );
 
-    console.log(`Visible columns: ${visibleOptionIds.length}`);
-
-    await Promise.all(
-      visibleOptionIds.map(async (optionId, index) => {
-        const option = columnProperty.options.find((opt) => opt.id === optionId);
-
-        if (!option) {
-          console.log(`  [${index}] Option not found: ${optionId}`);
-          return;
-        }
-
-        const { id } = await List.qm.createOne({
-          boardId: inputs.board.id,
-          type: List.Types.ACTIVE,
-          position: POSITION_GAP * (index + 1),
-          name: option.value,
-        });
-
-        listIdByOptionId[optionId] = id;
-        console.log(`  [${index}] Created list: "${option.value}" (position: ${POSITION_GAP * (index + 1)})`);
-      })
+    // =====================================================
+    // GROUP CARDS BY LIST
+    // =====================================================
+    const cardsByListId = sails.helpers.boards.groupFocalboardCardsByList(
+      focalboardCards,
+      kanbanView.fields.cardOrder || [],
+      columnPropertyId,
+      listIdByOptionId,
+      unorderedListId,
+      unorderedListName,
+      columnProperty.options,
     );
 
-    console.log(`  ✓ Created ${Object.keys(listIdByOptionId).length} lists`);
-
-    // Create an "Unordered" list for cards not in cardOrder or without column
-    const unorderedListName = 'Unordered';
-    const { id: unorderedListId } = await List.qm.createOne({
-      boardId: inputs.board.id,
-      type: List.Types.ACTIVE,
-      position: POSITION_GAP * (visibleOptionIds.length + 1),
-      name: unorderedListName,
-    });
-    console.log(`Created "${unorderedListName}" list (position: ${POSITION_GAP * (visibleOptionIds.length + 1)})`);
-
     // =====================================================
-    // GROUP CARDS BY COLUMN
+    // IMPORT CUSTOM FIELDS
     // =====================================================
-    console.log('');
-    console.log('--- Grouping Cards by Column ---');
 
-    // Build card order map
-    const cardOrder = kanbanView.fields.cardOrder || [];
-    console.log(`Cards in cardOrder: ${cardOrder.length}`);
-
-    // Group cards by their column assignment
-    const cardsByListId = {};
-
-    // Initialize lists
-    Object.values(listIdByOptionId).forEach((listId) => {
-      cardsByListId[listId] = [];
-    });
-    cardsByListId[unorderedListId] = [];
-
-    // Map Focalboard card IDs to card objects
-    const focalboardCardById = {};
-    focalboardCards.forEach((card) => {
-      focalboardCardById[card.id] = card;
-    });
-
-    // Process cards in cardOrder first (maintains order)
-    let processedFromCardOrder = 0;
-    let cardsWithoutColumn = 0;
-    const processedCardIds = new Set();
-
-    cardOrder.forEach((cardId) => {
-      const card = focalboardCardById[cardId];
-      if (!card) return;
-
-      processedCardIds.add(cardId);
-
-      const columnValue = card.fields?.properties?.[columnPropertyId];
-      const listId = listIdByOptionId[columnValue];
-
-      if (listId) {
-        cardsByListId[listId].push(card);
-      } else {
-        cardsByListId[unorderedListId].push(card);
-        cardsWithoutColumn += 1;
-      }
-
-      processedFromCardOrder += 1;
-    });
-
-    console.log(`Cards processed from cardOrder: ${processedFromCardOrder }`);
-
-    // Process cards not in cardOrder - place by column value, or Unordered if no column
-    let cardsNotInCardOrder = 0;
-    focalboardCards.forEach((card) => {
-      if (!processedCardIds.has(card.id)) {
-        const columnValue = card.fields?.properties?.[columnPropertyId];
-        const listId = listIdByOptionId[columnValue];
-
-        if (listId) {
-          cardsByListId[listId].push(card);
-        } else {
-          cardsByListId[unorderedListId].push(card);
-          cardsWithoutColumn += 1;
-        }
-
-        cardsNotInCardOrder += 1;
-      }
-    });
-
-    console.log(`Cards not in cardOrder (added to "${unorderedListName}"): ${cardsNotInCardOrder}`);
-    console.log(`Cards without column assignment: ${cardsWithoutColumn}`);
-
-    // Log carddistribution
-    console.log('');
-    console.log('Card distribution by list:');
-    Object.entries(cardsByListId).forEach(([listId, cards]) => {
-      // Find list name
-      let listName = unorderedListName;
-      for (const [optionId, id] of Object.entries(listIdByOptionId)) {
-        if (id === listId) {
-          const option = columnProperty.options?.find((o) => o.id === optionId);
-          listName = option?.value || 'Unknown';
-          break;
-        }
-      }
-      console.log(`  ${listName}: ${cards.length} cards`);
-    });
+    const { customFieldGroup, customFieldIdByFocalboardPropertyId } =
+    await sails.helpers.boards.importFocalboardCustomFields(
+      inputs.board.id,
+      boardBlock.cardProperties || [],
+    );
 
     // =====================================================
     // IMPORT CARDS
     // =====================================================
-    console.log('');
-    console.log('--- Importing Cards ---');
 
-    // Build text block lookup by parent ID
-    const textBlocksByParentId = {};
-    textBlocks.forEach((block) => {
-      if (!textBlocksByParentId[block.parentId]) {
-        textBlocksByParentId[block.parentId] = [];
-      }
-      textBlocksByParentId[block.parentId].push(block);
-    });
+    const stats = await sails.helpers.boards.importFocalboardCards(
+      inputs.board.id,
+      cardsByListId,
+      textBlocks,
+      dueDatePropertyId,
+      labelPropertyId,
+      labelIdByFocalboardLabelId,
+      listIdByOptionId,
+      columnProperty.options,
+      unorderedListName,
+      customFieldGroup,
+      customFieldIdByFocalboardPropertyId,
+    );
 
-
-    let totalCardsImported = 0;
-    let cardsWithoutTitle = 0;
-    let cardsWithDescriptions = 0;
-    let cardsWithLabels = 0;
-
-
-    // Process each list
-    for (const [listId, cards] of Object.entries(cardsByListId)) {
-      if (cards.length === 0) continue;
-
-      // Find list name for logging
-      let listName = unorderedListName;
-      for (const [optionId, id] of Object.entries(listIdByOptionId)) {
-        if (id === listId) {
-          const option = columnProperty.options?.find((o) => o.id === optionId);
-          listName = option?.value || 'Unknown';
-          break;
-        }
-      }
-
-      console.log(`Processing list "${listName}"...`);
-
-      await Promise.all(
-        cards.map(async (focalboardCard, index) => {
-          // Build description from text blocks
-          const cardTextBlocks = textBlocksByParentId[focalboardCard.id] || [];
-          const descriptionParts = cardTextBlocks
-            .map((block) => block.title?.trim())
-            .filter((text) => text);
-
-          const description = descriptionParts.length > 0 ? descriptionParts.join('\n\n') : null;
-
-          if (description) {
-            cardsWithDescriptions += 1;
-          }
-
-          // Create card
-          const cardValues = {
-            boardId: inputs.board.id,
-            listId,
-            type: Card.Types.PROJECT,
-            position: POSITION_GAP * (index + 1),
-            name: focalboardCard.title?.trim() || 'Untitled',
-            description,
-            listChangedAt: new Date(focalboardCard.updateAt).toISOString(),
-          };
-
-          const { id: cardId } = await Card.qm.createOne(cardValues);
-          totalCardsImported++;
-
-          // Assign labels to card
-          if (labelPropertyId) {
-            const cardLabelIds = focalboardCard.fields?.properties?.[labelPropertyId];
-
-            if (Array.isArray(cardLabelIds) && cardLabelIds.length > 0) {
-              await Promise.all(
-                cardLabelIds.map(async (focalboardLabelId) => {
-                  const plankaLabelId = labelIdByFocalboardLabelId[focalboardLabelId];
-
-                  if (plankaLabelId) {
-                    await CardLabel.qm.createOne({
-                      cardId,
-                      labelId: plankaLabelId,
-                    });
-                  }
-                }),
-              );
-
-              cardsWithLabels += 1;
-            }
-          }
-        })
-      );
-
-      console.log(`Created ${cards.length} cards`);
-    }
+    // =====================================================
+    // SUMMARY
+    // =====================================================
 
     console.log('');
     console.log('=== Import Complete ===');
-    console.log(`Total cards imported: ${totalCardsImported}`);
-    console.log(`Cards without title (named "Untitled"): ${cardsWithoutTitle}`);
-    console.log(`Cards with descriptions: ${cardsWithDescriptions}`);
-    console.log(`Cards with labels: ${cardsWithLabels}`);
+    console.log(`Total cards imported: ${stats.totalCardsImported}`);
+    console.log(`Cards without title (named "Untitled"): ${stats.cardsWithoutTitle}`);
+    console.log(`Cards with descriptions: ${stats.cardsWithDescriptions}`);
+    console.log(`Cards with labels: ${stats.cardsWithLabels}`);
+    console.log(`Cards with due date: ${stats.cardsWithDueDate}`);
+    console.log(`Cards with custom fields: ${stats.cardsWithCustomFields}`);
+    console.log(`Custom field values created: ${stats.customFieldValuesCreated}`);
     console.log(`Labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
     console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedListName}")`);
+    console.log(`Custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);
     console.log('');
   },
 };
