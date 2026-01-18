@@ -3,15 +3,32 @@
  * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
  */
 
-const fs = require('fs');
-const { rimraf } = require('rimraf');
-const readline = require('readline');
+/**
+ * @description :: Processes a Focalboard JSONL file for import, applying user's property selections.
+ */
 
 module.exports = {
   inputs: {
     file: {
       type: 'json',
       required: true,
+      description: 'Uploaded file object',
+    },
+    columnPropertyId: {
+      type: 'string',
+      description: 'Focalboard property ID to use for columns/lists',
+    },
+    labelPropertyId: {
+      type: 'string',
+      description: 'Focalboard property ID to use for labels',
+    },
+    dueDatePropertyId: {
+      type: 'string',
+      description: 'Focalboard property ID to use for due dates',
+    },
+    customFieldPropertyIds: {
+      type: 'ref',
+      description: 'Array of Focalboard property IDs to import as custom fields',
     },
   },
 
@@ -20,144 +37,73 @@ module.exports = {
   },
 
   async fn(inputs) {
+
+    const {
+      file,
+      columnPropertyId,
+      labelPropertyId,
+      dueDatePropertyId,
+      customFieldPropertyIds,
+    } = inputs;
+
+    const data = await sails.helpers.boards
+    .parseFocalboardFile(file)
+    .intercept('invalidFile', () => 'invalidFile');
+    const { board, views, cards, textBlocks } = data;
+
+    // Find the Kanban view
+    const kanbanView = views.find((view) => view.fields?.viewType === 'board');
+    if (!kanbanView) {
+      console.error('ERROR: No Kanban view found');
+      throw 'invalidFile';
+    }
+
+    // Determine column property (user selection or from view)
+    const effectiveColumnPropertyId = columnPropertyId || kanbanView.fields?.groupById;
+    const columnProperty = board.cardProperties?.find((p) => p.id === effectiveColumnPropertyId);
+
+    if (!columnProperty) {
+      console.error('ERROR: Column property not found');
+      throw 'invalidFile';
+    }
+
+    // Determine label property
+    let labels = [];
+    let effectiveLabelPropertyId = labelPropertyId;
+
+    if (effectiveLabelPropertyId) {
+      const labelProperty = board.cardProperties?.find((p) => p.id === effectiveLabelPropertyId);
+      if (labelProperty?.options) {
+        labels = labelProperty.options;
+      }
+    }
+
+    // Determine custom fields to import
+    let customFieldProperties = [];
+    if (customFieldPropertyIds && customFieldPropertyIds.length > 0) {
+      customFieldProperties = board.cardProperties?.filter(
+        (p) => customFieldPropertyIds.includes(p.id)
+      ) || [];
+    }
+
     console.log('');
-    console.log('=== Processing Focalboard JSONL File ===');
+    console.log('--- Import Configuration ---');
+    console.log(`Column property: ${columnProperty.name} (${columnProperty.id})`);
+    console.log(`Label property: ${effectiveLabelPropertyId ? 'Yes' : 'None'}`);
+    console.log(`Due date property: ${dueDatePropertyId ? 'Yes' : 'None'}`);
+    console.log(`Custom fields: ${customFieldProperties.length}`);
 
-    const fileStream = fs.createReadStream(inputs.file.fd);
-    const rl = readline.createInterface({
-      input: fileStream,
-      crlfDelay: Infinity,
-    });
-
-    const blocks = {
-      board: null,
-      views: [],
-      cards: [],
-      textBlocks: [],
-      labels: [],
+    return {
+      board,
+      views,
+      cards,
+      textBlocks,
+      // Mapping configuration
+      columnProperty,
+      labels,
+      labelPropertyId: effectiveLabelPropertyId,
+      dueDatePropertyId,
+      customFieldProperties,
     };
-
-    // To log
-    let lineCount = 0;
-    let emptyLines = 0;
-    let parseErrors = 0;
-    const unknownBlockTypes = new Set()
-
-    try {
-      for await (const line of rl) {
-        lineCount++;
-
-        if (!line.trim()) {
-          emptyLines++;
-          continue;
-        }
-
-        let parsed;
-        try {
-          parsed = JSON.parse(line);
-        } catch (error) {
-          parseErrors++;
-          console.warn(`Parse error on line ${lineCount}: ${error.message}`);
-          await rimraf(inputs.file.fd);
-          throw 'invalidFile';
-        }
-
-        // Focalboard exports have two formats (for this version):
-        // 1. Board: {"type":"board","data":{...}}
-        // 2. Blocks: {"type":"block","data":{...}}
-
-        let block;
-        if (parsed.type === 'board' && parsed.data) {
-          // Board is exported as type: "board"
-          block = parsed.data;
-          blocks.board = block;
-          console.log(`Found board: "${block.title}"`);
-          continue;
-        } else if (parsed.type === 'block' && parsed.data) {
-          // Other blocks are type: "block"
-          block = parsed.data;
-        } else {
-          console.warn(`Skipping line ${lineCount}: not a valid structure (type: ${parsed.type})`);
-          continue;
-        }
-
-        if (blocks.board) {
-          const labelProperty = blocks.board.cardProperties?.find(
-            p => p.name === 'Рубрика' || p.type === 'multiSelect' // Sysblok-specific
-          );
-          if (labelProperty?.options) {
-            blocks.labels = labelProperty.options;
-            blocks.labelPropertyId = labelProperty.id; // Need this for card assignment
-          }
-        }
-
-        switch (block.type) {
-          case 'board':
-            blocks.board = block;
-            console.log(`Found board: "${block.title}"`);
-            break;
-          case 'view':
-            blocks.views.push(block);
-            console.log(`Found view: "${block.title}" (type: ${block.fields?.viewType || 'unknown'})`);
-            break;
-          case 'card':
-            blocks.cards.push(block);
-            break;
-          case 'text':
-            blocks.textBlocks.push(block);
-            break;
-          // We can ignore other block types for now (comment, attachment, etc.)
-          default:
-            break;
-        }
-      }
-    } catch (error) {
-      await rimraf(inputs.file.fd);
-      if (error === 'invalidFile') {
-        throw error;
-      }
-      console.error('Unexpected error:', error);
-      throw 'invalidFile';
-    }
-
-    await rimraf(inputs.file.fd);
-
-    console.log('');
-    console.log('--- Parsing Summary ---');
-    console.log(`Total lines: ${lineCount}`);
-    console.log(`Empty lines: ${emptyLines}`);
-    console.log(`Board blocks: ${blocks.board ? 1 : 0}`);
-    console.log(`View blocks: ${blocks.views.length}`);
-    console.log(`Card blocks: ${blocks.cards.length}`);
-    console.log(`Text blocks: ${blocks.textBlocks.length}`);
-
-    if (unknownBlockTypes.size > 0) {
-      console.log(`Unknown block types (ignored): ${Array.from(unknownBlockTypes).join(', ')}`);
-    }
-
-    if (parseErrors > 0) {
-      console.warn(`Parse errors: ${parseErrors}`);
-    }
-
-    // Validate that we have the minimum required data
-    if (!blocks.board) {
-      console.error('ERROR: No board block found');
-      throw 'invalidFile';
-    }
-
-    if (blocks.views.length === 0) {
-      console.error('ERROR: No view blocks found');
-      throw 'invalidFile';
-    }
-
-    if (blocks.cards.length === 0) {
-      console.error('ERROR: No card blocks found');
-      throw 'invalidFile';
-    }
-
-    console.log('✓ File validated successfully');
-    console.log('');
-
-    return blocks;
   },
 };

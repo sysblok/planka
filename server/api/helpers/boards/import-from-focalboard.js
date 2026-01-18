@@ -3,8 +3,10 @@
  * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
  */
 
-// Focalboard property name for due date (will be looked up by name)
-const DUE_DATE_PROPERTY_NAME = 'Дедлайн';
+/**
+ * @description :: Main orchestrator for Focalboard import.
+ *                 Coordinates labels, lists, cards, and custom fields import.
+ */
 
 module.exports = {
   inputs: {
@@ -28,17 +30,13 @@ module.exports = {
       views,
       cards: focalboardCards,
       textBlocks,
+      // User selections (from processUploadedFocalboardImportFile)
+      columnProperty,
       labels: focalboardLabels,
       labelPropertyId,
+      dueDatePropertyId,
+      customFieldProperties,
     } = inputs.focalboardData;
-
-    console.log('');
-    console.log('=== Starting Focalboard Import ===');
-    console.log(`Board: ${boardBlock.title || 'Unknown'}`);
-    console.log(`Total views: ${views.length}`);
-    console.log(`Total cards: ${focalboardCards.length}`);
-    console.log(`Total text blocks: ${textBlocks.length}`);
-    console.log(`Total labels: ${focalboardLabels.length}`);
 
     // Find the Kanban view
     const kanbanView = views.find((view) => view.fields.viewType === 'board');
@@ -47,27 +45,27 @@ module.exports = {
     }
 
     console.log(`Using Kanban view: ${kanbanView.title}`);
-
-    // Find the column property (the one used for grouping in Kanban view)
-    const columnPropertyId = kanbanView.fields?.groupById;
-    const columnProperty = boardBlock.cardProperties?.find((p) => p.id === columnPropertyId);
-
-    if (!columnProperty) {
-      throw new Error('Column property not found in Focalboard export');
-    }
     console.log(`Column property: ${columnProperty.name} (${columnProperty.type})`);
     console.log(`Total column options: ${columnProperty.options.length}`);
 
-    // Find the due date property by name
-    const dueDateProperty = boardBlock.cardProperties?.find(
-      (p) => p.name === DUE_DATE_PROPERTY_NAME && p.type === 'date'
-    );
-    const dueDatePropertyId = dueDateProperty?.id || null;
+    if (labelPropertyId) {
+      console.log(`Label property ID: ${labelPropertyId}`);
+      console.log(`Total labels: ${focalboardLabels.length}`);
+    } else {
+      console.log('No label property selected');
+    }
 
     if (dueDatePropertyId) {
-      console.log(`Due date property found: "${DUE_DATE_PROPERTY_NAME}" (${dueDatePropertyId})`);
+      console.log(`Due date property ID: ${dueDatePropertyId}`);
     } else {
-      console.log(`Due date property "${DUE_DATE_PROPERTY_NAME}" not found, skipping due dates`);
+      console.log('No due date property selected');
+    }
+
+    if (customFieldProperties && customFieldProperties.length > 0) {
+      console.log(`Custom fields to import: ${customFieldProperties.length}`);
+      customFieldProperties.forEach((p) => console.log(`  - ${p.name} (${p.type})`));
+    } else {
+      console.log('No custom fields selected');
     }
 
     // =====================================================
@@ -76,7 +74,7 @@ module.exports = {
 
     const labelIdByFocalboardLabelId = await sails.helpers.boards.importFocalboardLabels(
       inputs.board.id,
-      focalboardLabels,
+      focalboardLabels || [],
     );
 
     // =====================================================
@@ -92,6 +90,9 @@ module.exports = {
     // =====================================================
     // GROUP CARDS BY LIST
     // =====================================================
+
+    const columnPropertyId = columnProperty.id;
+
     const cardsByListId = sails.helpers.boards.groupFocalboardCardsByList(
       focalboardCards,
       kanbanView.fields.cardOrder || [],
@@ -106,11 +107,17 @@ module.exports = {
     // IMPORT CUSTOM FIELDS
     // =====================================================
 
-    const { customFieldGroup, customFieldIdByFocalboardPropertyId } =
-    await sails.helpers.boards.importFocalboardCustomFields(
-      inputs.board.id,
-      boardBlock.cardProperties || [],
-    );
+    let customFieldGroup = null;
+    let customFieldIdByFocalboardPropertyId = {};
+
+    if (customFieldProperties && customFieldProperties.length > 0) {
+      const result = await sails.helpers.boards.importFocalboardCustomFields(
+        inputs.board.id,
+        customFieldProperties,
+      );
+      customFieldGroup = result.customFieldGroup;
+      customFieldIdByFocalboardPropertyId = result.customFieldIdByFocalboardPropertyId;
+    }
 
     // =====================================================
     // IMPORT CARDS

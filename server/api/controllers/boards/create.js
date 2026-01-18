@@ -49,6 +49,10 @@
  *                 type: string
  *                 format: binary
  *                 description: Import file
+*               importMapping:
+ *                 type: string
+ *                 description: JSON object with property mappings for Focalboard import
+ *                 example: '{"columnPropertyId":"...","labelPropertyId":"...","dueDatePropertyId":"...","customFieldPropertyIds":["...","..."]}'
  *               requestId:
  *                 type: string
  *                 maxLength: 128
@@ -139,6 +143,10 @@ module.exports = {
       type: 'string',
       isIn: Object.values(Board.ImportTypes),
     },
+    importMapping: {
+      type: 'json',
+      description: 'Property mappings for Focalboard import: { columnPropertyId, labelPropertyId, dueDatePropertyId, customFieldPropertyIds[] }',
+    },
     requestId: {
       type: 'string',
       isNotEmptyString: true,
@@ -201,8 +209,16 @@ module.exports = {
           board: trelloBoard,
         };
       } else if (inputs.importType === Board.ImportTypes.FOCALBOARD) {
+        const mapping = inputs.importMapping || {};
+
         const focalboardData = await sails.helpers.boards
-          .processUploadedFocalboardImportFile(file)
+          .processUploadedFocalboardImportFile.with({
+            file,
+            columnPropertyId: mapping.columnPropertyId,
+            labelPropertyId: mapping.labelPropertyId,
+            dueDatePropertyId: mapping.dueDatePropertyId,
+            customFieldPropertyIds: mapping.customFieldPropertyIds || [],
+          })
           .intercept('invalidFile', () => Errors.INVALID_IMPORT_FILE);
 
         boardImport = {
