@@ -157,6 +157,7 @@ module.exports = {
             name: focalboardCard.title?.trim() || 'Untitled',
             description,
             dueDate,
+            isDueCompleted: dueDate ? false : null,
             listChangedAt: new Date(focalboardCard.updateAt).toISOString(),
           };
 
