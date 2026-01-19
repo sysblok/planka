@@ -57,7 +57,7 @@ module.exports = {
     const customFieldIdByFocalboardPropertyId = {};
 
     await Promise.all(
-      propertiesToImport.map(async (focalboardProperty, index) => {
+      customFieldProperties.map(async (focalboardProperty, index) => {
         const customField = await CustomField.qm.createOne({
           customFieldGroupId: customFieldGroup.id,
           position: POSITION_GAP * (index + 1),

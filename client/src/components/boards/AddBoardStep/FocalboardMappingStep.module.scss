@@ -1,0 +1,118 @@
+/*!
+ * Copyright (c) 2024 PLANKA Software GmbH
+ * Licensed under the Fair Use License: https://github.com/plankanban/planka/blob/master/LICENSE.md
+ */
+
+ :global(#app) {
+  .loaderWrapper {
+    padding: 32px 0;
+    text-align: center;
+
+    p {
+      color: #6b808c;
+      margin-top: 16px;
+    }
+  }
+
+  .boardInfo {
+    background: rgba(9, 30, 66, 0.04);
+    border-radius: 3px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+
+    strong {
+      color: #172b4d;
+      display: block;
+      margin-bottom: 2px;
+    }
+  }
+
+  .stats {
+    color: #6b808c;
+    font-size: 12px;
+  }
+
+  .section {
+    margin-bottom: 12px;
+  }
+
+  .label {
+    color: #444444;
+    font-size: 12px;
+    font-weight: bold;
+    padding-bottom: 6px;
+  }
+
+  .required {
+    color: #eb5a46;
+  }
+
+  .labelWithActions {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 6px;
+
+    .label {
+      padding-bottom: 0;
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .actionButton {
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #6b808c !important;
+    font-size: 11px !important;
+    font-weight: normal !important;
+    padding: 4px 8px !important;
+    text-decoration: underline;
+
+    &:hover {
+      background: rgba(9, 30, 66, 0.08) !important;
+      color: #092d42 !important;
+    }
+  }
+
+  .checkboxList {
+    background: rgba(9, 30, 66, 0.04);
+    border-radius: 3px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+
+  .checkboxItem {
+    border-radius: 3px;
+    padding: 6px 8px;
+
+    &:hover {
+      background: rgba(9, 30, 66, 0.08);
+    }
+  }
+
+  .checkboxLabel {
+    align-items: center;
+    display: flex !important;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .propertyType {
+    background: rgba(9, 30, 66, 0.08);
+    border-radius: 3px;
+    color: #6b808c;
+    font-size: 10px;
+    margin-left: 8px;
+    padding: 2px 6px;
+    text-transform: uppercase;
+  }
+
+  .submitButton {
+    margin-top: 8px;
+  }
+}

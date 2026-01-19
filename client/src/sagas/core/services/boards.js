@@ -16,6 +16,10 @@ import ActionTypes from '../../../constants/ActionTypes';
 import ModalTypes from '../../../constants/ModalTypes';
 
 export function* createBoard(projectId, { import: boardImport, ...data }) {
+
+  console.log('Saga received boardImport:', boardImport);
+  console.log('Saga boardImport.mapping:', boardImport?.mapping);
+
   const localId = yield call(createLocalId);
 
   const nextData = {
@@ -40,22 +44,42 @@ export function* createBoard(projectId, { import: boardImport, ...data }) {
   let boardMemberships;
 
   try {
-    ({
-      item: board,
-      included: { boardMemberships },
-    } = yield boardImport
-      ? call(
-          request,
-          api.createBoardWithImport,
-          projectId,
-          {
-            ...nextData,
-            importType: boardImport.type,
-            importFile: boardImport.file,
-          },
-          localId,
-        )
-      : call(request, api.createBoard, projectId, nextData));
+    if (boardImport) {
+      // Build import payload
+      const importPayload = {
+        ...nextData,
+        importType: boardImport.type,
+        importFile: boardImport.file,
+      };
+
+      // Add mapping for Focalboard imports
+      if (boardImport.type === 'focalboard' && boardImport.mapping) {
+        importPayload.importMapping = JSON.stringify(boardImport.mapping);
+      }
+
+      console.log('Saga importPayload:', importPayload);
+  console.log('importMapping value:', importPayload.importMapping);
+  console.log('importPayload keys:', Object.keys(importPayload));
+console.log('importPayload.importMapping:', importPayload.importMapping);
+console.log('typeof importMapping:', typeof importPayload.importMapping);
+
+      ({
+        item: board,
+        included: { boardMemberships },
+      } = yield call(
+        request,
+        api.createBoardWithImport,
+        projectId,
+        importPayload,
+        localId,
+      ));
+    } else {
+      ({
+        item: board,
+
+        included: { boardMemberships },
+      } = yield call(request, api.createBoard, projectId, nextData));
+    }
   } catch (error) {
     yield put(actions.createBoard.failure(localId, error));
     return;

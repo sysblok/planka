@@ -42,6 +42,7 @@ const AddBoardStep = React.memo(({ onClose }) => {
   const [nameFieldRef, handleNameFieldRef] = useNestedRef('inputRef');
 
   const handleSubmit = useCallback(() => {
+    console.log('AddBoardStep submitting data:', data);
     const cleanData = {
       ...data,
       name: data.name.trim(),
@@ -52,12 +53,24 @@ const AddBoardStep = React.memo(({ onClose }) => {
       return;
     }
 
+    // Transform import data for API
+    if (cleanData.import) {
+      const { type, file, mapping } = cleanData.import;
+      cleanData.import = {
+        type,
+        file,
+        // Include mapping for Focalboard imports
+        ...(mapping && { mapping }),
+      };
+    }
+
     dispatch(entryActions.createBoardInCurrentProject(cleanData));
     onClose();
   }, [onClose, dispatch, data, nameFieldRef]);
 
   const handleImportSelect = useCallback(
     (nextImport) => {
+      console.log('AddBoardStep received import:', nextImport);
       setData((prevData) => ({
         ...prevData,
         import: nextImport,
