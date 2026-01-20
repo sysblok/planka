@@ -17,9 +17,6 @@ import ModalTypes from '../../../constants/ModalTypes';
 
 export function* createBoard(projectId, { import: boardImport, ...data }) {
 
-  console.log('Saga received boardImport:', boardImport);
-  console.log('Saga boardImport.mapping:', boardImport?.mapping);
-
   const localId = yield call(createLocalId);
 
   const nextData = {
@@ -56,12 +53,6 @@ export function* createBoard(projectId, { import: boardImport, ...data }) {
       if (boardImport.type === 'focalboard' && boardImport.mapping) {
         importPayload.importMapping = JSON.stringify(boardImport.mapping);
       }
-
-      console.log('Saga importPayload:', importPayload);
-  console.log('importMapping value:', importPayload.importMapping);
-  console.log('importPayload keys:', Object.keys(importPayload));
-console.log('importPayload.importMapping:', importPayload.importMapping);
-console.log('typeof importMapping:', typeof importPayload.importMapping);
 
       ({
         item: board,

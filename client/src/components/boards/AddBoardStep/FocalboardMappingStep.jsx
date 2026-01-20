@@ -17,7 +17,15 @@ import styles from './FocalboardMappingStep.module.scss';
 const COLUMN_TYPES = ['select'];
 const LABEL_TYPES = ['select', 'multiSelect'];
 const DUE_DATE_TYPES = ['date'];
-const CUSTOM_FIELD_TYPES = ['text', 'url', 'number', 'email', 'phone', 'checkbox', 'date'];
+
+// Supported custom field types (stored as strings in Planka)
+const SUPPORTED_CUSTOM_FIELD_TYPES = ['text', 'url', 'number', 'email', 'phone', 'checkbox'];
+
+// All custom field types to show (excluding column/label types)
+const ALL_CUSTOM_FIELD_TYPES = [
+  'text', 'url', 'number', 'email', 'phone', 'checkbox', 'date',
+  'person', 'multiPerson', 'file', 'createdTime', 'createdBy', 'updatedTime', 'updatedBy',
+];
 
 const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const [t] = useTranslation();
@@ -27,6 +35,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const [previewData, setPreviewData] = useState(null);
 
   // User selections
+  const [useBoardTitle, setUseBoardTitle] = useState(true);
   const [columnPropertyId, setColumnPropertyId] = useState(null);
   const [labelPropertyId, setLabelPropertyId] = useState(null);
   const [dueDatePropertyId, setDueDatePropertyId] = useState(null);
@@ -109,12 +118,33 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     ];
   }, [previewData, t]);
 
+  // Get all custom field properties (excluding those used for columns/labels)
   const customFieldProperties = useMemo(() => {
     if (!previewData) return [];
-    return previewData.properties.filter((p) => CUSTOM_FIELD_TYPES.includes(p.type));
+    return previewData.properties.filter((p) =>
+      ALL_CUSTOM_FIELD_TYPES.includes(p.type) &&
+      !COLUMN_TYPES.includes(p.type) &&
+      !LABEL_TYPES.includes(p.type)
+    );
   }, [previewData]);
 
+  // Get only supported custom field IDs (for select all)
+  const supportedCustomFieldIds = useMemo(() => {
+    return customFieldProperties
+      .filter((p) => SUPPORTED_CUSTOM_FIELD_TYPES.includes(p.type))
+      .map((p) => p.id);
+  }, [customFieldProperties]);
+
+  // Check if a property type is supported
+  const isTypeSupported = useCallback((type) => {
+    return SUPPORTED_CUSTOM_FIELD_TYPES.includes(type);
+  }, []);
+
   // Handlers
+  const handleUseBoardTitleChange = useCallback(() => {
+    setUseBoardTitle((prev) => !prev);
+  }, []);
+
   const handleColumnChange = useCallback((_, { value }) => {
     setColumnPropertyId(value);
   }, []);
@@ -127,7 +157,10 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     setDueDatePropertyId(value);
   }, []);
 
-  const handleCustomFieldToggle = useCallback((propertyId) => {
+  const handleCustomFieldToggle = useCallback((propertyId, isSupported) => {
+    // Only allow toggling supported types
+    if (!isSupported) return;
+
     setCustomFieldPropertyIds((prev) =>
       prev.includes(propertyId)
         ? prev.filter((id) => id !== propertyId)
@@ -136,8 +169,8 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   }, []);
 
   const handleSelectAllCustomFields = useCallback(() => {
-    setCustomFieldPropertyIds(customFieldProperties.map((p) => p.id));
-  }, [customFieldProperties]);
+    setCustomFieldPropertyIds(supportedCustomFieldIds);
+  }, [supportedCustomFieldIds]);
 
   const handleDeselectAllCustomFields = useCallback(() => {
     setCustomFieldPropertyIds([]);
@@ -146,19 +179,19 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const handleSubmit = useCallback(() => {
     if (!columnPropertyId) return;
 
-    const importData = {
+    // Just call onSelect - ImportStep will handle navigation
+    onSelect({
       type: 'focalboard',
       file,
+      boardTitle: useBoardTitle ? previewData.board.title : null,
       mapping: {
         columnPropertyId,
         labelPropertyId: labelPropertyId || undefined,
         dueDatePropertyId: dueDatePropertyId || undefined,
         customFieldPropertyIds: customFieldPropertyIds.length > 0 ? customFieldPropertyIds : undefined,
       },
-    };
-    console.log('FocalboardMappingStep sending:', importData);
-    onSelect(importData);
-  }, [file, columnPropertyId, labelPropertyId, dueDatePropertyId, customFieldPropertyIds, onSelect, onBack]);
+    });
+  }, [file, useBoardTitle, previewData, columnPropertyId, labelPropertyId, dueDatePropertyId, customFieldPropertyIds, onSelect]);
 
   // Loading state
   if (isLoading) {
@@ -201,7 +234,18 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
       </Popup.Header>
       <Popup.Content>
         <div className={styles.boardInfo}>
-          <strong>{previewData.board.title}</strong>
+          <div className={styles.boardTitleRow}>
+            <Checkbox
+              checked={useBoardTitle}
+              onChange={handleUseBoardTitleChange}
+            />
+            <strong
+              className={useBoardTitle ? styles.boardTitleActive : styles.boardTitleInactive}
+              onClick={handleUseBoardTitleChange}
+            >
+              {previewData.board.title}
+            </strong>
+          </div>
           <span className={styles.stats}>
             {t('common.cardsCount', { count: previewData.stats.totalCards })}
           </span>
@@ -272,20 +316,31 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
                 </div>
               </div>
               <div className={styles.checkboxList}>
-                {customFieldProperties.map((property) => (
-                  <div key={property.id} className={styles.checkboxItem}>
-                    <Checkbox
-                      checked={customFieldPropertyIds.includes(property.id)}
-                      label={
-                        <label className={styles.checkboxLabel}>
-                          <span>{property.name}</span>
-                          <span className={styles.propertyType}>{property.type}</span>
-                        </label>
-                      }
-                      onChange={() => handleCustomFieldToggle(property.id)}
-                    />
-                  </div>
-                ))}
+                {customFieldProperties.map((property) => {
+                  const supported = isTypeSupported(property.type);
+                  return (
+                    <div
+                      key={property.id}
+                      className={`${styles.checkboxItem} ${!supported ? styles.checkboxItemDisabled : ''}`}
+                    >
+                      <Checkbox
+                        checked={customFieldPropertyIds.includes(property.id)}
+                        disabled={!supported}
+                        label={
+                          <label className={styles.checkboxLabel}>
+                            <span className={!supported ? styles.propertyNameDisabled : ''}>
+                              {property.name}
+                            </span>
+                            <span className={`${styles.propertyType} ${!supported ? styles.propertyTypeUnsupported : ''}`}>
+                              {supported ? property.type : t('common.unsupported')}
+                            </span>
+                          </label>
+                        }
+                        onChange={() => handleCustomFieldToggle(property.id, supported)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

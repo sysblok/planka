@@ -44,7 +44,6 @@ module.exports = {
           });
 
           labelIdByFocalboardLabelId[focalboardLabel.id] = id;
-          console.log(`Created label: "${focalboardLabel.value}" (${focalboardLabel.color} → ${plankaColor})`);
         }),
       );
     } else {

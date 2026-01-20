@@ -42,7 +42,6 @@ const AddBoardStep = React.memo(({ onClose }) => {
   const [nameFieldRef, handleNameFieldRef] = useNestedRef('inputRef');
 
   const handleSubmit = useCallback(() => {
-    console.log('AddBoardStep submitting data:', data);
     const cleanData = {
       ...data,
       name: data.name.trim(),
@@ -70,10 +69,10 @@ const AddBoardStep = React.memo(({ onClose }) => {
 
   const handleImportSelect = useCallback(
     (nextImport) => {
-      console.log('AddBoardStep received import:', nextImport);
       setData((prevData) => ({
         ...prevData,
         import: nextImport,
+        name: nextImport.boardTitle || prevData.name,
       }));
     },
     [setData],

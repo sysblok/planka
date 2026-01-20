@@ -170,11 +170,6 @@ module.exports = {
   },
 
   async fn(inputs, exits) {
-    console.log('Raw request body:', this.req.body);
-  console.log('All params:', this.req.allParams());
-    console.log('All inputs:', JSON.stringify(inputs, null, 2));
-  console.log('importMapping specifically:', inputs.importMapping);
-  console.log('importType:', inputs.importType);
     const { currentUser } = this.req;
 
     const project = await Project.qm.getOneById(inputs.projectId);
@@ -214,7 +209,6 @@ module.exports = {
           board: trelloBoard,
         };
       } else if (inputs.importType === Board.ImportTypes.FOCALBOARD) {
-        console.log('typeof importMapping:', typeof inputs.importMapping);
         let mapping = inputs.importMapping || {};
 
         if (typeof mapping === 'string') {
@@ -225,8 +219,6 @@ module.exports = {
             mapping = {};
           }
         }
-
-        console.log('Parsed mapping:', mapping);
 
         const focalboardData = await sails.helpers.boards
           .processUploadedFocalboardImportFile.with({

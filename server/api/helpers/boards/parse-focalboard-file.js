@@ -19,6 +19,11 @@ module.exports = {
       required: true,
       description: 'Uploaded file object with fd (file descriptor)',
     },
+    previewOnly: {
+      type: 'boolean',
+      defaultsTo: false,
+      description: 'If true, only parse board and views (faster for preview)',
+    },
   },
 
   exits: {
@@ -28,6 +33,7 @@ module.exports = {
   async fn(inputs) {
     console.log('');
     console.log('=== Parsing Focalboard JSONL File ===');
+    const { previewOnly } = inputs;
 
     const fileStream = fs.createReadStream(inputs.file.fd);
     const rl = readline.createInterface({
@@ -45,6 +51,8 @@ module.exports = {
     let lineCount = 0;
     let emptyLines = 0;
     let parseErrors = 0;
+    let cardCount = 0;
+    let textBlockCount = 0;
     const unknownBlockTypes = new Set();
 
     try {
@@ -79,25 +87,27 @@ module.exports = {
         } else if (parsed.type === 'block' && parsed.data) {
           block = parsed.data;
         } else {
-          console.warn(`Skipping line ${lineCount}: not a valid structure (type: ${parsed.type})`);
+          // console.warn(`Skipping line ${lineCount}: not a valid structure (type: ${parsed.type})`);
           continue;
         }
 
         switch (block.type) {
-          case 'board':
-            data.board = block;
-            console.log(`Found board: "${block.title}"`);
-            break;
           case 'view':
             data.views.push(block);
-            console.log(`Found view: "${block.title}" (type: ${block.fields?.viewType || 'unknown'})`);
             break;
           case 'card':
-            data.cards.push(block);
+            if (previewOnly) {
+              cardCount++;
+            } else {
+              data.cards.push(block);
+            }
             break;
           case 'text':
-            data.textBlocks.push(block);
-            break;
+            if (previewOnly) {
+              textBlockCount++;
+            } else {
+              data.textBlocks.push(block);
+            }
           default:
             unknownBlockTypes.add(block.type);
             break;
@@ -142,9 +152,15 @@ module.exports = {
       throw 'invalidFile';
     }
 
-    if (data.cards.length === 0) {
-      console.error('ERROR: No card blocks found');
+    // For full parsing, validate cards exist
+    if (!previewOnly && data.cards.length === 0) {
       throw 'invalidFile';
+    }
+
+    // In preview mode, add counts to data
+    if (previewOnly) {
+      data.cardCount = cardCount;
+      data.textBlockCount = textBlockCount;
     }
 
     console.log('✓ File parsed successfully');

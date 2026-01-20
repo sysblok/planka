@@ -19,11 +19,31 @@
     border-radius: 3px;
     margin-bottom: 12px;
     padding: 10px 12px;
+  }
 
-    strong {
+  .boardTitleRow {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .boardTitleActive {
+    color: #172b4d;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .boardTitleInactive {
+    color: #6b808c;
+    cursor: pointer;
+    text-decoration: line-through;
+
+    &:hover {
       color: #172b4d;
-      display: block;
-      margin-bottom: 2px;
     }
   }
 
@@ -95,11 +115,23 @@
     }
   }
 
+  .checkboxItemDisabled {
+    opacity: 0.6;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+
   .checkboxLabel {
     align-items: center;
     display: flex !important;
     justify-content: space-between;
     width: 100%;
+  }
+
+  .propertyNameDisabled {
+    color: #6b808c;
   }
 
   .propertyType {
@@ -110,6 +142,11 @@
     margin-left: 8px;
     padding: 2px 6px;
     text-transform: uppercase;
+  }
+
+  .propertyTypeUnsupported {
+    background: rgba(235, 90, 70, 0.1);
+    color: #eb5a46;
   }
 
   .submitButton {

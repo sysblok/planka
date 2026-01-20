@@ -156,7 +156,10 @@ module.exports = {
     // Parse the Focalboard file
     let focalboardData;
     try {
-      focalboardData = await sails.helpers.boards.parseFocalboardFile(file);
+      focalboardData = await sails.helpers.boards.parseFocalboardFile.with({
+        file,
+        previewOnly: true,
+      });
     } catch (error) {
       if (error === 'invalidFile' || error.code === 'invalidFile') {
         throw Errors.INVALID_FILE;
@@ -164,7 +167,7 @@ module.exports = {
       throw error;
     }
 
-    const { board, views, cards, textBlocks } = focalboardData;
+    const { board, views, cardCount, textBlockCount } = focalboardData;
 
     // Build response with properties for user selection
     const properties = (board.cardProperties || []).map((prop) => ({
@@ -191,8 +194,8 @@ module.exports = {
       properties,
       views: viewsInfo,
       stats: {
-        totalCards: cards.length,
-        totalTextBlocks: textBlocks.length,
+        totalCards: cardCount,
+        totalTextBlocks: textBlockCount,
       },
     });
   },
