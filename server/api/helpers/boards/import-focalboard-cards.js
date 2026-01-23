@@ -141,7 +141,7 @@ module.exports = {
           let dueDate = null;
           if (dueDatePropertyId) {
             const dueDateRaw = focalboardCard.fields?.properties?.[dueDatePropertyId];
-            dueDate = sails.helpers.utils.parseFocalboardDate(dueDateRaw);
+            dueDate = sails.helpers.boards.parseFocalboardDate(dueDateRaw);
 
             if (dueDate) {
               stats.cardsWithDueDate += 1;
