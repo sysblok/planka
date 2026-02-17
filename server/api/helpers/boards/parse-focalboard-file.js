@@ -46,6 +46,8 @@ module.exports = {
       views: [],
       cards: [],
       textBlocks: [],
+      boardMembers: [],
+      users: [],
     };
 
     let lineCount = 0;
@@ -74,42 +76,38 @@ module.exports = {
           throw 'invalidFile';
         }
 
-        // Focalboard exports have two formats:
-        // 1. Board: {"type":"board","data":{...}}
-        // 2. Blocks: {"type":"block","data":{...}}
+        if (!parsed.data) continue;
 
-        let block;
-        if (parsed.type === 'board' && parsed.data) {
-          block = parsed.data;
-          data.board = block;
-          console.log(`Found board: "${block.title}"`);
-          continue;
-        } else if (parsed.type === 'block' && parsed.data) {
-          block = parsed.data;
-        } else {
-          // console.warn(`Skipping line ${lineCount}: not a valid structure (type: ${parsed.type})`);
-          continue;
+        switch (parsed.type) {
+          case 'board':
+            data.board = parsed.data;
+            console.log(`Found board: "${parsed.data.title}"`);
+            continue;
+          case 'boardMember':
+            data.boardMembers.push(parsed.data);
+            continue;
+          case 'user':
+            data.users.push(parsed.data);
+            continue;
+          case 'block':
+            break; // fall through to block-type switch below
+          default:
+            continue;
         }
 
-        switch (block.type) {
+        // Handle block subtypes
+        switch (parsed.data.type) {
           case 'view':
-            data.views.push(block);
+            data.views.push(parsed.data);
             break;
           case 'card':
-            if (previewOnly) {
-              cardCount++;
-            } else {
-              data.cards.push(block);
-            }
+            if (previewOnly) { cardCount++; } else { data.cards.push(parsed.data); }
             break;
           case 'text':
-            if (previewOnly) {
-              textBlockCount++;
-            } else {
-              data.textBlocks.push(block);
-            }
+            if (previewOnly) { textBlockCount++; } else { data.textBlocks.push(parsed.data); }
+            break;
           default:
-            unknownBlockTypes.add(block.type);
+            unknownBlockTypes.add(parsed.data.type);
             break;
         }
       }
@@ -132,6 +130,8 @@ module.exports = {
     console.log(`Views: ${data.views.length}`);
     console.log(`Cards: ${data.cards.length}`);
     console.log(`Text blocks: ${data.textBlocks.length}`);
+    console.log(`Board members: ${data.boardMembers.length}`);
+    console.log(`Users: ${data.users.length}`);
 
     if (unknownBlockTypes.size > 0) {
       console.log(`Unknown block types (ignored): ${Array.from(unknownBlockTypes).join(', ')}`);

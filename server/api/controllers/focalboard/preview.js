@@ -169,13 +169,54 @@ module.exports = {
 
     const { board, views, cardCount, textBlockCount } = focalboardData;
 
-    // Build response with properties for user selection
-    const properties = (board.cardProperties || []).map((prop) => ({
-      id: prop.id,
-      name: prop.name,
-      type: prop.type,
-      options: prop.options || [],
-    }));
+    // Categorize properties for frontend dropdowns
+    const properties = {
+      columns: [],
+      labels: [],
+      dates: [],
+      assignees: [],
+      customFields: [],
+    };
+
+    for (const prop of board.cardProperties || []) {
+      const normalized = {
+        id: prop.id,
+        name: prop.name,
+        type: prop.type,
+        options: prop.options || [],
+      };
+
+      switch (prop.type) {
+        case 'select':
+          properties.columns.push(normalized);
+          break;
+        case 'multiSelect':
+          properties.labels.push(normalized);
+          break;
+        case 'date':
+          properties.dates.push(normalized);
+          break;
+        case 'person':
+        case 'multiPerson':
+          properties.assignees.push(normalized);
+          break;
+        case 'text':
+        case 'url':
+        case 'number':
+        case 'email':
+        case 'phone':
+        case 'checkbox':
+          properties.customFields.push(normalized);
+          break;
+        default:
+          // Skip: createdTime, createdBy, updatedTime, updatedBy, file, unknown
+          break;
+      }
+    }
+
+    // Suggest column property from the kanban view
+    const kanbanView = views.find((v) => v.fields?.viewType === 'board');
+    const suggestedColumnPropertyId = kanbanView?.fields?.groupById || null;
 
     // Extract view info for column property detection
     const viewsInfo = views.map((view) => ({
@@ -192,6 +233,7 @@ module.exports = {
         description: board.description || null,
       },
       properties,
+      suggestedColumnPropertyId,
       views: viewsInfo,
       stats: {
         totalCards: cardCount,

@@ -17,6 +17,7 @@ import styles from './FocalboardMappingStep.module.scss';
 const COLUMN_TYPES = ['select'];
 const LABEL_TYPES = ['select', 'multiSelect'];
 const DUE_DATE_TYPES = ['date'];
+const ASSIGNEE_TYPES = ['person', 'multiPerson'];
 
 // Supported custom field types (stored as strings in Planka)
 const SUPPORTED_CUSTOM_FIELD_TYPES = ['text', 'url', 'number', 'email', 'phone', 'checkbox'];
@@ -39,6 +40,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const [columnPropertyId, setColumnPropertyId] = useState(null);
   const [labelPropertyId, setLabelPropertyId] = useState(null);
   const [dueDatePropertyId, setDueDatePropertyId] = useState(null);
+  const [assigneePropertyId, setAssigneePropertyId] = useState(null);
   const [customFieldPropertyIds, setCustomFieldPropertyIds] = useState([]);
 
   // Fetch preview data on mount
@@ -81,9 +83,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   // Filter properties by type for each dropdown
   const columnOptions = useMemo(() => {
     if (!previewData) return [];
-    return previewData.properties
-      .filter((p) => COLUMN_TYPES.includes(p.type))
-      .map((p) => ({
+    return previewData.properties.columns.map((p) => ({
         key: p.id,
         value: p.id,
         text: `${p.name} (${p.options?.length || 0} options)`,
@@ -94,9 +94,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     if (!previewData) return [];
     return [
       { key: 'none', value: '', text: t('common.none') },
-      ...previewData.properties
-        .filter((p) => LABEL_TYPES.includes(p.type))
-        .map((p) => ({
+      ...previewData.properties.labels.map((p) => ({
           key: p.id,
           value: p.id,
           text: `${p.name} (${p.options?.length || 0} options)`,
@@ -108,9 +106,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     if (!previewData) return [];
     return [
       { key: 'none', value: '', text: t('common.none') },
-      ...previewData.properties
-        .filter((p) => DUE_DATE_TYPES.includes(p.type))
-        .map((p) => ({
+      ...previewData.properties.dates.map((p) => ({
           key: p.id,
           value: p.id,
           text: p.name,
@@ -118,14 +114,23 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     ];
   }, [previewData, t]);
 
+  const assigneeOptions = useMemo(() => {
+    if (!previewData) return [];
+    return [
+      { key: 'none', value: '', text: t('common.none') },
+      ...previewData.properties.assignees.map((p) => ({
+          key: p.id,
+          value: p.id,
+          text: `${p.name} (${p.type})`,
+        })),
+    ];
+  }, [previewData, t]);
+
   // Get all custom field properties (excluding those used for columns/labels)
   const customFieldProperties = useMemo(() => {
     if (!previewData) return [];
-    return previewData.properties.filter((p) =>
-      ALL_CUSTOM_FIELD_TYPES.includes(p.type) &&
-      !COLUMN_TYPES.includes(p.type) &&
-      !LABEL_TYPES.includes(p.type)
-    );
+    return previewData.properties.customFields;
+
   }, [previewData]);
 
   // Get only supported custom field IDs (for select all)
@@ -155,6 +160,10 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
 
   const handleDueDateChange = useCallback((_, { value }) => {
     setDueDatePropertyId(value);
+  }, []);
+
+  const handleAssigneeChange = useCallback((_, { value }) => {
+    setAssigneePropertyId(value);
   }, []);
 
   const handleCustomFieldToggle = useCallback((propertyId, isSupported) => {
@@ -188,6 +197,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
         columnPropertyId,
         labelPropertyId: labelPropertyId || undefined,
         dueDatePropertyId: dueDatePropertyId || undefined,
+        assigneePropertyId: assigneePropertyId || undefined,
         customFieldPropertyIds: customFieldPropertyIds.length > 0 ? customFieldPropertyIds : undefined,
       },
     });
@@ -292,6 +302,21 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
               onChange={handleDueDateChange}
             />
           </div>
+
+          {/* Assignees (optional) */}
+          {assigneeOptions.length > 1 && (
+            <div className={styles.section}>
+              <div className={styles.label}>{t('common.assignees')}</div>
+              <Dropdown
+                fluid
+                selection
+                options={assigneeOptions}
+                value={assigneePropertyId || ''}
+                placeholder={t('common.selectProperty')}
+                onChange={handleAssigneeChange}
+              />
+            </div>
+          )}
 
           {/* Custom Fields (optional, multiple) */}
           {customFieldProperties.length > 0 && (

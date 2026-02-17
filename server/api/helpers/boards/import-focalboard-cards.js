@@ -57,6 +57,15 @@ module.exports = {
       required: true,
       description: 'Name of the unordered list (for logging)',
     },
+    assigneePropertyId: {
+      type: 'string',
+      allowNull: true,
+      description: 'Focalboard property ID for assignees (maps to CardMembership)',
+    },
+    userMapping: {
+      type: 'ref',
+      description: 'Map of Focalboard user ID to Planka user ID',
+    },
     customFieldGroup: {
       type: 'ref',
       description: 'Planka CustomFieldGroup for this board (null if no custom fields)',
@@ -78,6 +87,8 @@ module.exports = {
       listIdByOptionId,
       columnOptions,
       unorderedListName,
+      assigneePropertyId,
+      userMapping,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
     } = inputs;
@@ -100,6 +111,10 @@ module.exports = {
       cardsWithDescriptions: 0,
       cardsWithLabels: 0,
       cardsWithDueDate: 0,
+      cardsWithMembers: 0,
+      cardsWithCreator: 0,
+      cardMembershipsCreated: 0,
+      skippedUserAssignments: 0,
       cardsWithCustomFields: 0,
       customFieldValuesCreated: 0,
     };
@@ -148,6 +163,8 @@ module.exports = {
             }
           }
 
+          const creatorPlankaId = userMapping[focalboardCard.createdBy];
+
           // Create card
           const cardValues = {
             boardId,
@@ -159,6 +176,7 @@ module.exports = {
             dueDate,
             isDueCompleted: dueDate ? false : null,
             listChangedAt: new Date(focalboardCard.updateAt).toISOString(),
+            creatorUserId: creatorPlankaId || null,
           };
 
           if (!focalboardCard.title?.trim()) {
@@ -166,7 +184,45 @@ module.exports = {
           }
 
           const { id: cardId } = await Card.qm.createOne(cardValues);
+
+          if (creatorPlankaId) {
+            stats.cardsWithCreator++;
+          };
+
           stats.totalCardsImported += 1;
+
+          // Assign card members from assignee property
+          if (assigneePropertyId && userMapping) {
+            const assigneeValue = focalboardCard.fields?.properties?.[assigneePropertyId];
+
+            if (assigneeValue) {
+              const userIds = Array.isArray(assigneeValue) ? assigneeValue : [assigneeValue];
+              let hasMembers = false;
+
+              await Promise.all(
+                userIds.map(async (fbUserId) => {
+                  if (!fbUserId) return;
+
+                  const plankaUserId = userMapping[fbUserId];
+
+                  if (plankaUserId) {
+                    await CardMembership.qm.createOne({
+                      cardId,
+                      userId: plankaUserId,
+                    });
+                    hasMembers = true;
+                    stats.cardMembershipsCreated += 1;
+                  } else {
+                    stats.skippedUserAssignments += 1;
+                  }
+                }),
+              );
+
+              if (hasMembers) {
+                stats.cardsWithMembers += 1;
+              }
+            }
+          }
 
           // Assign labels to card
           if (labelPropertyId) {

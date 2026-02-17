@@ -30,11 +30,13 @@ module.exports = {
       views,
       cards: focalboardCards,
       textBlocks,
-      // User selections (from processUploadedFocalboardImportFile)
+      boardMembers,
+      users,
       columnProperty,
       labels: focalboardLabels,
       labelPropertyId,
       dueDatePropertyId,
+      assigneePropertyId,
       customFieldProperties,
     } = inputs.focalboardData;
 
@@ -67,6 +69,23 @@ module.exports = {
     } else {
       console.log('No custom fields selected');
     }
+
+    // =====================================================
+    // BUILD USER MAPPING
+    // =====================================================
+    const userMappingResult = await sails.helpers.boards.buildFocalboardUserMapping(users);
+    const userMapping = userMappingResult.focalboardUserIdToPlankaUserId;
+
+    // =====================================================
+    // IMPORT BOARD MEMBERS
+    // =====================================================
+
+    await sails.helpers.boards.importFocalboardBoardMembers(
+      inputs.board.id,
+      inputs.board.projectId,
+      boardMembers,
+      userMapping
+    );
 
     // =====================================================
     // IMPORT LABELS
@@ -119,6 +138,8 @@ module.exports = {
       customFieldIdByFocalboardPropertyId = result.customFieldIdByFocalboardPropertyId;
     }
 
+
+
     // =====================================================
     // IMPORT CARDS
     // =====================================================
@@ -133,6 +154,8 @@ module.exports = {
       listIdByOptionId,
       columnProperty.options,
       unorderedListName,
+      assigneePropertyId,
+      userMapping,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
     );
@@ -150,6 +173,10 @@ module.exports = {
     console.log(`Cards with due date: ${stats.cardsWithDueDate}`);
     console.log(`Cards with custom fields: ${stats.cardsWithCustomFields}`);
     console.log(`Custom field values created: ${stats.customFieldValuesCreated}`);
+    console.log(`Cards with creator: ${stats.cardsWithCreator}`);
+    console.log(`Cards with members: ${stats.cardsWithMembers}`);
+    console.log(`Card memberships created: ${stats.cardMembershipsCreated}`);
+    console.log(`Skipped user assignments (user not in Planka): ${stats.skippedUserAssignments}`);
     console.log(`Labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
     console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedListName}")`);
     console.log(`Custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);

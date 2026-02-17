@@ -52,7 +52,7 @@
 *               importMapping:
  *                 type: string
  *                 description: JSON object with property mappings for Focalboard import
- *                 example: '{"columnPropertyId":"...","labelPropertyId":"...","dueDatePropertyId":"...","customFieldPropertyIds":["...","..."]}'
+ *                 example: '{"columnPropertyId":"...","labelPropertyId":"...","dueDatePropertyId":"...","assigneePropertyId":"...","customFieldPropertyIds":["...","..."]}'
  *               requestId:
  *                 type: string
  *                 maxLength: 128
@@ -226,6 +226,7 @@ module.exports = {
             columnPropertyId: mapping.columnPropertyId,
             labelPropertyId: mapping.labelPropertyId,
             dueDatePropertyId: mapping.dueDatePropertyId,
+            assigneePropertyId: mapping.assigneePropertyId,
             customFieldPropertyIds: mapping.customFieldPropertyIds || [],
           })
           .intercept('invalidFile', () => Errors.INVALID_IMPORT_FILE);

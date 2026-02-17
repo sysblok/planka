@@ -26,6 +26,10 @@ module.exports = {
       type: 'string',
       description: 'Focalboard property ID to use for due dates',
     },
+    assigneePropertyId: {
+      type: 'string',
+      description: 'Focalboard property ID to use for assignees (maps to CardMembership)',
+    },
     customFieldPropertyIds: {
       type: 'ref',
       description: 'Array of Focalboard property IDs to import as custom fields',
@@ -43,13 +47,14 @@ module.exports = {
       columnPropertyId,
       labelPropertyId,
       dueDatePropertyId,
+      assigneePropertyId,
       customFieldPropertyIds,
     } = inputs;
 
     const data = await sails.helpers.boards
     .parseFocalboardFile(file)
     .intercept('invalidFile', () => 'invalidFile');
-    const { board, views, cards, textBlocks } = data;
+    const { board, views, cards, textBlocks, boardMembers, users } = data;
 
     // Find the Kanban view
     const kanbanView = views.find((view) => view.fields?.viewType === 'board');
@@ -91,6 +96,7 @@ module.exports = {
     console.log(`Column property: ${columnProperty.name} (${columnProperty.id})`);
     console.log(`Label property: ${effectiveLabelPropertyId ? 'Yes' : 'None'}`);
     console.log(`Due date property: ${dueDatePropertyId ? 'Yes' : 'None'}`);
+    console.log(`Assignee property: ${assigneePropertyId ? 'Yes' : 'None'}`);
     console.log(`Custom fields: ${customFieldProperties.length}`);
 
     return {
@@ -98,11 +104,13 @@ module.exports = {
       views,
       cards,
       textBlocks,
-      // Mapping configuration
+      boardMembers,
+      users,
       columnProperty,
       labels,
       labelPropertyId: effectiveLabelPropertyId,
       dueDatePropertyId,
+      assigneePropertyId,
       customFieldProperties,
     };
   },
