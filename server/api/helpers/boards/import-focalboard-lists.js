@@ -31,14 +31,19 @@ module.exports = {
   async fn(inputs) {
     const { boardId, visibleOptionIds, columnOptions } = inputs;
 
+    // If visibleOptionIds is empty, fall back to all column options (in their defined order)
+    const effectiveVisibleIds = (visibleOptionIds && visibleOptionIds.length > 0)
+      ? visibleOptionIds
+      : columnOptions.map(opt => opt.id);
+
     console.log('');
     console.log('--- Creating Lists ---');
-    console.log(`Visible columns: ${visibleOptionIds.length}`);
+    console.log(`Visible columns: ${effectiveVisibleIds.length}${visibleOptionIds.length === 0 ? ' (fallback to all options)' : ''}`)
 
     const listIdByOptionId = {};
 
     await Promise.all(
-      visibleOptionIds.map(async (optionId, index) => {
+     effectiveVisibleIds.map(async (optionId, index) => {
         const option = columnOptions.find((opt) => opt.id === optionId);
 
         if (!option) {
