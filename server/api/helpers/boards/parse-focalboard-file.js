@@ -46,6 +46,7 @@ module.exports = {
       views: [],
       cards: [],
       textBlocks: [],
+      comments: [],
       boardMembers: [],
       users: [],
     };
@@ -55,6 +56,7 @@ module.exports = {
     let parseErrors = 0;
     let cardCount = 0;
     let textBlockCount = 0;
+    let commentCount = 0;
     const unknownBlockTypes = new Set();
 
     try {
@@ -106,6 +108,9 @@ module.exports = {
           case 'text':
             if (previewOnly) { textBlockCount++; } else { data.textBlocks.push(parsed.data); }
             break;
+          case 'comment':
+            if (previewOnly) { commentCount++; } else { data.comments.push(parsed.data); }
+            break;
           default:
             unknownBlockTypes.add(parsed.data.type);
             break;
@@ -130,6 +135,7 @@ module.exports = {
     console.log(`Views: ${data.views.length}`);
     console.log(`Cards: ${data.cards.length}`);
     console.log(`Text blocks: ${data.textBlocks.length}`);
+    console.log(`Comments: ${data.comments.length}`);
     console.log(`Board members: ${data.boardMembers.length}`);
     console.log(`Users: ${data.users.length}`);
 
@@ -161,6 +167,7 @@ module.exports = {
     if (previewOnly) {
       data.cardCount = cardCount;
       data.textBlockCount = textBlockCount;
+      data.commentCount = commentCount;
     }
 
     console.log('✓ File parsed successfully');

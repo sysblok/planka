@@ -119,6 +119,9 @@ module.exports = {
       customFieldValuesCreated: 0,
     };
 
+    // Mapping of Focalboard card ID to Planka card ID (for comments import)
+    const cardIdMapping = {};
+
     const hasCustomFields = customFieldGroup && customFieldIdByFocalboardPropertyId &&
       Object.keys(customFieldIdByFocalboardPropertyId).length > 0;
 
@@ -184,6 +187,9 @@ module.exports = {
           }
 
           const { id: cardId } = await Card.qm.createOne(cardValues);
+
+          // Store mapping for comments import
+          cardIdMapping[focalboardCard.id] = cardId;
 
           if (creatorPlankaId) {
             stats.cardsWithCreator++;
@@ -286,6 +292,6 @@ module.exports = {
       console.log(`Created ${cards.length} cards`);
     }
 
-    return stats;
+    return { stats, cardIdMapping };
   },
 };

@@ -167,7 +167,7 @@ module.exports = {
       throw error;
     }
 
-    const { board, views, cardCount, textBlockCount } = focalboardData;
+    const { board, views, cardCount, textBlockCount, commentCount } = focalboardData;
 
     // Categorize properties for frontend dropdowns
     const properties = {
@@ -238,6 +238,7 @@ module.exports = {
       stats: {
         totalCards: cardCount,
         totalTextBlocks: textBlockCount,
+        totalComments: commentCount,
       },
     });
   },

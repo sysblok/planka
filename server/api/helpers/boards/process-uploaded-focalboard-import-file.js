@@ -54,7 +54,7 @@ module.exports = {
     const data = await sails.helpers.boards
     .parseFocalboardFile(file)
     .intercept('invalidFile', () => 'invalidFile');
-    const { board, views, cards, textBlocks, boardMembers, users } = data;
+    const { board, views, cards, textBlocks, comments, boardMembers, users } = data;
 
     // Find the Kanban view
     const kanbanView = views.find((view) => view.fields?.viewType === 'board');
@@ -104,6 +104,7 @@ module.exports = {
       views,
       cards,
       textBlocks,
+      comments,
       boardMembers,
       users,
       columnProperty,

@@ -30,6 +30,7 @@ module.exports = {
       views,
       cards: focalboardCards,
       textBlocks,
+      comments,
       boardMembers,
       users,
       columnProperty,
@@ -144,7 +145,7 @@ module.exports = {
     // IMPORT CARDS
     // =====================================================
 
-    const stats = await sails.helpers.boards.importFocalboardCards(
+    const {stats, cardIdMapping} = await sails.helpers.boards.importFocalboardCards(
       inputs.board.id,
       cardsByListId,
       textBlocks,
@@ -158,6 +159,17 @@ module.exports = {
       userMapping,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
+    );
+
+    // =====================================================
+    // IMPORT COMMENTS
+    // =====================================================
+
+    const commentStats = await sails.helpers.boards.importFocalboardComments(
+      comments || [],
+      cardIdMapping,
+      userMapping,
+      users,
     );
 
     // =====================================================
@@ -180,6 +192,9 @@ module.exports = {
     console.log(`Labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
     console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedListName}")`);
     console.log(`Custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);
+    console.log(`Comments imported: ${commentStats.totalCommentsImported}`);
+    console.log(`Comments with matched user: ${commentStats.commentsWithUser}`);
+    console.log(`Comments without matched user: ${commentStats.commentsWithoutUser}`);
     console.log('');
   },
 };
