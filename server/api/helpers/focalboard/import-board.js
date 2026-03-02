@@ -75,14 +75,14 @@ module.exports = {
     // =====================================================
     // BUILD USER MAPPING
     // =====================================================
-    const userMappingResult = await sails.helpers.boards.buildFocalboardUserMapping(users);
+    const userMappingResult = await sails.helpers.focalboard.buildUserMapping(users);
     const userMapping = userMappingResult.focalboardUserIdToPlankaUserId;
 
     // =====================================================
     // IMPORT BOARD MEMBERS
     // =====================================================
 
-    await sails.helpers.boards.importFocalboardBoardMembers(
+    await sails.helpers.focalboard.importBoardMembers(
       inputs.board.id,
       inputs.board.projectId,
       boardMembers,
@@ -93,7 +93,7 @@ module.exports = {
     // IMPORT LABELS
     // =====================================================
 
-    const labelIdByFocalboardLabelId = await sails.helpers.boards.importFocalboardLabels(
+    const labelIdByFocalboardLabelId = await sails.helpers.focalboard.importLabels(
       inputs.board.id,
       focalboardLabels || [],
     );
@@ -102,7 +102,7 @@ module.exports = {
     // LISTS SECTION
     // =====================================================
     const { listIdByOptionId, unorderedListId, unorderedListName } =
-      await sails.helpers.boards.importFocalboardLists(
+      await sails.helpers.focalboard.importLists(
         inputs.board.id,
         kanbanView.fields?.visibleOptionIds || [],
         columnProperty.options,
@@ -114,7 +114,7 @@ module.exports = {
 
     const columnPropertyId = columnProperty.id;
 
-    const cardsByListId = sails.helpers.boards.groupFocalboardCardsByList(
+    const cardsByListId = sails.helpers.focalboard.groupCardsByList(
       focalboardCards,
       kanbanView.fields.cardOrder || [],
       columnPropertyId,
@@ -132,7 +132,7 @@ module.exports = {
     let customFieldIdByFocalboardPropertyId = {};
 
     if (customFieldProperties && customFieldProperties.length > 0) {
-      const result = await sails.helpers.boards.importFocalboardCustomFields(
+      const result = await sails.helpers.focalboard.importCustomFields(
         inputs.board.id,
         customFieldProperties,
       );
@@ -146,7 +146,7 @@ module.exports = {
     // IMPORT CARDS
     // =====================================================
 
-    const {stats, cardIdMapping} = await sails.helpers.boards.importFocalboardCards(
+    const {stats, cardIdMapping} = await sails.helpers.focalboard.importCards(
       inputs.board.id,
       cardsByListId,
       textBlocks,
@@ -166,7 +166,7 @@ module.exports = {
     // IMPORT COMMENTS
     // =====================================================
 
-    const commentStats = await sails.helpers.boards.importFocalboardComments(
+    const commentStats = await sails.helpers.focalboard.importComments(
       comments || [],
       cardIdMapping,
       userMapping,
@@ -177,7 +177,7 @@ module.exports = {
     // IMPORT CHECKBOXES (as TaskLists/Tasks)
     // =====================================================
 
-    const checkboxStats = await sails.helpers.boards.importFocalboardCheckboxes(
+    const checkboxStats = await sails.helpers.focalboard.importCheckboxes(
       checkboxes || [],
       cardIdMapping,
     );

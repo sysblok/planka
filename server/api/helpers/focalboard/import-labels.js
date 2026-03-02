@@ -34,7 +34,7 @@ module.exports = {
     if (focalboardLabels.length > 0) {
       await Promise.all(
         focalboardLabels.map(async (focalboardLabel, index) => {
-          const plankaColor = sails.helpers.boards.convertFocalboardLabelColor(focalboardLabel.color);
+          const plankaColor = sails.helpers.focalboard.convertLabelColor(focalboardLabel.color);
 
           const { id } = await Label.qm.createOne({
             boardId,

@@ -160,7 +160,7 @@ module.exports = {
     // Parse the Focalboard file
     let focalboardData;
     try {
-      focalboardData = await sails.helpers.boards.parseFocalboardFile.with({
+      focalboardData = await sails.helpers.focalboard.parseFile.with({
         file,
         previewOnly: true,
       });

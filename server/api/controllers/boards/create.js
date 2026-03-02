@@ -220,8 +220,8 @@ module.exports = {
           }
         }
 
-        const focalboardData = await sails.helpers.boards
-          .processUploadedFocalboardImportFile.with({
+        const focalboardData = await sails.helpers.focalboard
+          .processUploadedImportFile.with({
             file,
             columnPropertyId: mapping.columnPropertyId,
             labelPropertyId: mapping.labelPropertyId,

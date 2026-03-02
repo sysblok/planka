@@ -51,8 +51,8 @@ module.exports = {
       customFieldPropertyIds,
     } = inputs;
 
-    const data = await sails.helpers.boards
-    .parseFocalboardFile(file)
+    const data = await sails.helpers.focalboard
+    .parseFile(file)
     .intercept('invalidFile', () => 'invalidFile');
     const { board, views, cards, textBlocks, comments, checkboxes,boardMembers, users } = data;
 
