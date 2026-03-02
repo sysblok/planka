@@ -258,6 +258,12 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
           </div>
           <span className={styles.stats}>
             {t('common.cardsCount', { count: previewData.stats.totalCards })}
+            {previewData.stats.totalComments > 0 && (
+              <> · {t('common.commentsCount', { count: previewData.stats.totalComments })}</>
+            )}
+            {previewData.stats.totalCheckboxes > 0 && (
+              <> · {t('common.tasksCount', { count: previewData.stats.totalCheckboxes })}</>
+            )}
           </span>
         </div>
 

@@ -47,6 +47,7 @@ module.exports = {
       cards: [],
       textBlocks: [],
       comments: [],
+      checkboxes: [],
       boardMembers: [],
       users: [],
     };
@@ -57,6 +58,7 @@ module.exports = {
     let cardCount = 0;
     let textBlockCount = 0;
     let commentCount = 0;
+    let checkboxCount = 0;
     const unknownBlockTypes = new Set();
 
     try {
@@ -111,6 +113,9 @@ module.exports = {
           case 'comment':
             if (previewOnly) { commentCount++; } else { data.comments.push(parsed.data); }
             break;
+          case 'checkbox':
+            if (previewOnly) { checkboxCount++; } else { data.checkboxes.push(parsed.data); }
+            break;
           default:
             unknownBlockTypes.add(parsed.data.type);
             break;
@@ -136,6 +141,7 @@ module.exports = {
     console.log(`Cards: ${data.cards.length}`);
     console.log(`Text blocks: ${data.textBlocks.length}`);
     console.log(`Comments: ${data.comments.length}`);
+    console.log(`Checkboxes: ${data.checkboxes.length}`);
     console.log(`Board members: ${data.boardMembers.length}`);
     console.log(`Users: ${data.users.length}`);
 
@@ -168,6 +174,7 @@ module.exports = {
       data.cardCount = cardCount;
       data.textBlockCount = textBlockCount;
       data.commentCount = commentCount;
+      data.checkboxCount = checkboxCount;
     }
 
     console.log('✓ File parsed successfully');

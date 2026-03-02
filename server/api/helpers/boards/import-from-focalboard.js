@@ -31,6 +31,7 @@ module.exports = {
       cards: focalboardCards,
       textBlocks,
       comments,
+      checkboxes,
       boardMembers,
       users,
       columnProperty,
@@ -173,6 +174,15 @@ module.exports = {
     );
 
     // =====================================================
+    // IMPORT CHECKBOXES (as TaskLists/Tasks)
+    // =====================================================
+
+    const checkboxStats = await sails.helpers.boards.importFocalboardCheckboxes(
+      checkboxes || [],
+      cardIdMapping,
+    );
+
+    // =====================================================
     // SUMMARY
     // =====================================================
 
@@ -195,6 +205,9 @@ module.exports = {
     console.log(`Comments imported: ${commentStats.totalCommentsImported}`);
     console.log(`Comments with matched user: ${commentStats.commentsWithUser}`);
     console.log(`Comments without matched user: ${commentStats.commentsWithoutUser}`);
+    console.log(`TaskLists created: ${checkboxStats.totalTaskListsCreated}`);
+    console.log(`Tasks created: ${checkboxStats.totalTasksCreated}`);
+    console.log(`Tasks completed: ${checkboxStats.tasksCompleted}`);
     console.log('');
   },
 };

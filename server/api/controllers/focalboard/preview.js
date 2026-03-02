@@ -167,7 +167,7 @@ module.exports = {
       throw error;
     }
 
-    const { board, views, cardCount, textBlockCount, commentCount } = focalboardData;
+    const { board, views, cardCount, textBlockCount, commentCount, checkboxCount } = focalboardData;
 
     // Categorize properties for frontend dropdowns
     const properties = {
@@ -239,6 +239,7 @@ module.exports = {
         totalCards: cardCount,
         totalTextBlocks: textBlockCount,
         totalComments: commentCount,
+        totalCheckboxes: checkboxCount,
       },
     });
   },
