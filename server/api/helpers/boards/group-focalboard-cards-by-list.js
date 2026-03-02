@@ -126,22 +126,6 @@ module.exports = {
     console.log(`Cards not in cardOrder (added to "${unorderedListName}"): ${cardsNotInCardOrder}`);
     console.log(`Cards without column assignment: ${cardsWithoutColumn}`);
 
-    // Log card distribution
-    console.log('');
-    console.log('Card distribution by list:');
-    Object.entries(cardsByListId).forEach(([listId, cards]) => {
-      // Find list name
-      let listName = unorderedListName;
-      for (const [optionId, id] of Object.entries(listIdByOptionId)) {
-        if (id === listId) {
-          const option = columnOptions.find((o) => o.id === optionId);
-          listName = option?.value || 'Unknown';
-          break;
-        }
-      }
-      console.log(`  ${listName}: ${cards.length} cards`);
-    });
-
     return cardsByListId;
   },
 };

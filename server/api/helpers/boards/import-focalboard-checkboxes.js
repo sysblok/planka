@@ -34,7 +34,6 @@ module.exports = {
     const stats = {
       totalTaskListsCreated: 0,
       totalTasksCreated: 0,
-      tasksCompleted: 0,
       skippedNoCard: 0,
       skippedNoTitle: 0,
     };
@@ -95,9 +94,6 @@ module.exports = {
         });
 
         stats.totalTasksCreated += 1;
-        if (isCompleted) {
-          stats.tasksCompleted += 1;
-        }
       }
     }
 
@@ -105,7 +101,6 @@ module.exports = {
     console.log('--- Checkboxes Import Summary ---');
     console.log(`TaskLists created: ${stats.totalTaskListsCreated}`);
     console.log(`Tasks created: ${stats.totalTasksCreated}`);
-    console.log(`Tasks completed: ${stats.tasksCompleted}`);
     console.log(`Skipped (card not found): ${stats.skippedNoCard}`);
     console.log(`Skipped (empty title): ${stats.skippedNoTitle}`);
     console.log('');

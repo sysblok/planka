@@ -93,6 +93,10 @@
  *                       type: number
  *                     totalTextBlocks:
  *                       type: number
+ *                     totalComments:
+ *                       type: number
+ *                     totalCheckboxes:
+ *                       type: number
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  *       422:

@@ -198,7 +198,6 @@ module.exports = {
     console.log(`Cards with creator: ${stats.cardsWithCreator}`);
     console.log(`Cards with members: ${stats.cardsWithMembers}`);
     console.log(`Card memberships created: ${stats.cardMembershipsCreated}`);
-    console.log(`Skipped user assignments (user not in Planka): ${stats.skippedUserAssignments}`);
     console.log(`Labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
     console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedListName}")`);
     console.log(`Custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);
@@ -207,7 +206,6 @@ module.exports = {
     console.log(`Comments without matched user: ${commentStats.commentsWithoutUser}`);
     console.log(`TaskLists created: ${checkboxStats.totalTaskListsCreated}`);
     console.log(`Tasks created: ${checkboxStats.totalTasksCreated}`);
-    console.log(`Tasks completed: ${checkboxStats.tasksCompleted}`);
     console.log('');
   },
 };

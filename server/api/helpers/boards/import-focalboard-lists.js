@@ -59,7 +59,7 @@ module.exports = {
         });
 
         listIdByOptionId[optionId] = id;
-        console.log(`  [${index}] Created list: "${option.value}" (position: ${POSITION_GAP * (index + 1)})`);
+        console.log(`  [${index}] Created list: "${option.value}"`);
       }),
     );
 

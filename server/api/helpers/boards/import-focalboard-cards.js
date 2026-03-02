@@ -114,7 +114,6 @@ module.exports = {
       cardsWithMembers: 0,
       cardsWithCreator: 0,
       cardMembershipsCreated: 0,
-      skippedUserAssignments: 0,
       cardsWithCustomFields: 0,
       customFieldValuesCreated: 0,
     };
@@ -138,8 +137,6 @@ module.exports = {
           break;
         }
       }
-
-      console.log(`Processing list "${listName}"...`);
 
       await Promise.all(
         cards.map(async (focalboardCard, index) => {
@@ -218,8 +215,6 @@ module.exports = {
                     });
                     hasMembers = true;
                     stats.cardMembershipsCreated += 1;
-                  } else {
-                    stats.skippedUserAssignments += 1;
                   }
                 }),
               );
@@ -289,7 +284,7 @@ module.exports = {
         }),
       );
 
-      console.log(`Created ${cards.length} cards`);
+      console.log(`Created ${cards.length} cards in list "${listName}"`);
     }
 
     return { stats, cardIdMapping };

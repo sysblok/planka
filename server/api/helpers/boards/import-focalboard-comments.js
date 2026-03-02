@@ -37,7 +37,6 @@ module.exports = {
 
     console.log('');
     console.log('=== Importing Comments ===');
-    console.log(`Total comments to import: ${comments.length}`);
 
     const stats = {
       totalCommentsImported: 0,

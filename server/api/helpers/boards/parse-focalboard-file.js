@@ -31,9 +31,12 @@ module.exports = {
   },
 
   async fn(inputs) {
-    console.log('');
-    console.log('=== Parsing Focalboard JSONL File ===');
     const { previewOnly } = inputs;
+
+    if (previewOnly) {
+      console.log('');
+      console.log('=== Parsing Focalboard JSONL File (Preview) ===');
+    }
 
     const fileStream = fs.createReadStream(inputs.file.fd);
     const rl = readline.createInterface({
@@ -85,7 +88,9 @@ module.exports = {
         switch (parsed.type) {
           case 'board':
             data.board = parsed.data;
-            console.log(`Found board: "${parsed.data.title}"`);
+            if (previewOnly) {
+              console.log(`Found board: "${parsed.data.title}"`);
+            }
             continue;
           case 'boardMember':
             data.boardMembers.push(parsed.data);
@@ -132,27 +137,6 @@ module.exports = {
 
     await rimraf(inputs.file.fd);
 
-    console.log('');
-    console.log('--- Parsing Summary ---');
-    console.log(`Total lines: ${lineCount}`);
-    console.log(`Empty lines: ${emptyLines}`);
-    console.log(`Board: ${data.board ? data.board.title : 'NOT FOUND'}`);
-    console.log(`Views: ${data.views.length}`);
-    console.log(`Cards: ${data.cards.length}`);
-    console.log(`Text blocks: ${data.textBlocks.length}`);
-    console.log(`Comments: ${data.comments.length}`);
-    console.log(`Checkboxes: ${data.checkboxes.length}`);
-    console.log(`Board members: ${data.boardMembers.length}`);
-    console.log(`Users: ${data.users.length}`);
-
-    if (unknownBlockTypes.size > 0) {
-      console.log(`Unknown block types (ignored): ${Array.from(unknownBlockTypes).join(', ')}`);
-    }
-
-    if (parseErrors > 0) {
-      console.warn(`Parse errors: ${parseErrors}`);
-    }
-
     // Validate minimum required data
     if (!data.board) {
       console.error('ERROR: No board block found');
@@ -169,16 +153,37 @@ module.exports = {
       throw 'invalidFile';
     }
 
-    // In preview mode, add counts to data
+    // In preview mode, show summary and add counts to data
     if (previewOnly) {
+      console.log('');
+      console.log('--- Parsing Summary ---');
+      console.log(`Total lines: ${lineCount}`);
+      console.log(`Empty lines: ${emptyLines}`);
+      console.log(`Board: ${data.board.title}`);
+      console.log(`Views: ${data.views.length}`);
+      console.log(`Cards: ${cardCount}`);
+      console.log(`Text blocks: ${textBlockCount}`);
+      console.log(`Comments: ${commentCount}`);
+      console.log(`Checkboxes: ${checkboxCount}`);
+      console.log(`Board members: ${data.boardMembers.length}`);
+      console.log(`Users: ${data.users.length}`);
+
+      if (unknownBlockTypes.size > 0) {
+        console.log(`Unknown block types (ignored): ${Array.from(unknownBlockTypes).join(', ')}`);
+      }
+
+      if (parseErrors > 0) {
+        console.warn(`Parse errors: ${parseErrors}`);
+      }
+
+      console.log('✓ File parsed successfully');
+      console.log('');
+
       data.cardCount = cardCount;
       data.textBlockCount = textBlockCount;
       data.commentCount = commentCount;
       data.checkboxCount = checkboxCount;
     }
-
-    console.log('✓ File parsed successfully');
-    console.log('');
 
     return data;
   },
