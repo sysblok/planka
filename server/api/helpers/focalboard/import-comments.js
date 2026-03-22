@@ -111,6 +111,9 @@ module.exports = {
           cardId: plankaCardId,
           userId: plankaUserId || null,
           text: commentText,
+          createdAt: fbComment.createAt
+            ? new Date(fbComment.createAt).toISOString()
+            : undefined,
         });
 
         stats.totalCommentsImported += 1;
