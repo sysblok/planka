@@ -22,6 +22,11 @@ module.exports = {
       type: 'json',
       required: true,
     },
+    actorUser: {
+      type: 'ref',
+      required: true,
+      description: 'The user who triggered the import (used as fallback action creator)',
+    },
   },
 
   async fn(inputs) {
@@ -101,7 +106,7 @@ module.exports = {
     // =====================================================
     // LISTS SECTION
     // =====================================================
-    const { listIdByOptionId, unorderedListId, unorderedListName } =
+    const { listIdByOptionId, listById, unorderedList } =
       await sails.helpers.focalboard.importLists(
         inputs.board.id,
         kanbanView.fields?.visibleOptionIds || [],
@@ -119,8 +124,8 @@ module.exports = {
       kanbanView.fields.cardOrder || [],
       columnPropertyId,
       listIdByOptionId,
-      unorderedListId,
-      unorderedListName,
+      unorderedList.id,
+      unorderedList.name,
       columnProperty.options,
     );
 
@@ -140,24 +145,21 @@ module.exports = {
       customFieldIdByFocalboardPropertyId = result.customFieldIdByFocalboardPropertyId;
     }
 
-
-
     // =====================================================
     // IMPORT CARDS
     // =====================================================
 
-    const {stats, cardIdMapping} = await sails.helpers.focalboard.importCards(
+    const { stats, cardIdMapping } = await sails.helpers.focalboard.importCards(
       inputs.board.id,
       cardsByListId,
       textBlocks,
       dueDatePropertyId,
       labelPropertyId,
       labelIdByFocalboardLabelId,
-      listIdByOptionId,
-      columnProperty.options,
-      unorderedListName,
+      listById,
       assigneePropertyId,
       userMapping,
+      inputs.actorUser,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
     );
@@ -199,7 +201,7 @@ module.exports = {
     console.log(`Cards with members: ${stats.cardsWithMembers}`);
     console.log(`Card memberships created: ${stats.cardMembershipsCreated}`);
     console.log(`Labels created: ${Object.keys(labelIdByFocalboardLabelId).length}`);
-    console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedListName}")`);
+    console.log(`Lists created: ${Object.keys(listIdByOptionId).length + 1} (including "${unorderedList.name}")`);
     console.log(`Custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);
     console.log(`Comments imported: ${commentStats.totalCommentsImported}`);
     console.log(`Comments with matched user: ${commentStats.commentsWithUser}`);

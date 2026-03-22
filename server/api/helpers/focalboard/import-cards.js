@@ -7,7 +7,8 @@ const { POSITION_GAP } = require('../../../constants');
 
 /**
  * @description :: Creates Planka cards from grouped Focalboard card data.
- *                 Handles descriptions, due dates, label assignments, and custom field values.
+ *                 Handles descriptions, due dates, label assignments, custom field values,
+ *                 and CREATE_CARD action records with original Focalboard timestamps.
  */
 
 module.exports = {
@@ -42,20 +43,10 @@ module.exports = {
       required: true,
       description: 'Map of Focalboard label ID to Planka label ID',
     },
-    listIdByOptionId: {
+    listById: {
       type: 'ref',
       required: true,
-      description: 'Map of Focalboard option ID to Planka list ID (for logging)',
-    },
-    columnOptions: {
-      type: 'ref',
-      required: true,
-      description: 'Array of column property options (for logging)',
-    },
-    unorderedListName: {
-      type: 'string',
-      required: true,
-      description: 'Name of the unordered list (for logging)',
+      description: 'Map of Planka list ID to full list object',
     },
     assigneePropertyId: {
       type: 'string',
@@ -65,6 +56,11 @@ module.exports = {
     userMapping: {
       type: 'ref',
       description: 'Map of Focalboard user ID to Planka user ID',
+    },
+    actorUser: {
+      type: 'ref',
+      required: true,
+      description: 'The user who triggered the import (fallback for action userId)',
     },
     customFieldGroup: {
       type: 'ref',
@@ -84,11 +80,10 @@ module.exports = {
       dueDatePropertyId,
       labelPropertyId,
       labelIdByFocalboardLabelId,
-      listIdByOptionId,
-      columnOptions,
-      unorderedListName,
+      listById,
       assigneePropertyId,
       userMapping,
+      actorUser,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
     } = inputs;
@@ -128,15 +123,8 @@ module.exports = {
     for (const [listId, cards] of Object.entries(cardsByListId)) {
       if (cards.length === 0) continue;
 
-      // Find list name for logging
-      let listName = unorderedListName;
-      for (const [optionId, id] of Object.entries(listIdByOptionId)) {
-        if (id === listId) {
-          const option = columnOptions.find((o) => o.id === optionId);
-          listName = option?.value || 'Unknown';
-          break;
-        }
-      }
+      const list = listById[listId];
+      const listName = list?.name || 'Unknown';
 
       await Promise.all(
         cards.map(async (focalboardCard, index) => {
@@ -175,24 +163,44 @@ module.exports = {
             description,
             dueDate,
             isDueCompleted: dueDate ? false : null,
-            listChangedAt: new Date(focalboardCard.updateAt).toISOString(),
+            listChangedAt: new Date().toISOString(),
             creatorUserId: creatorPlankaId || null,
+            createdAt: focalboardCard.createAt
+              ? new Date(focalboardCard.createAt).toISOString()
+              : undefined,
           };
 
           if (!focalboardCard.title?.trim()) {
             stats.cardsWithoutTitle += 1;
           }
 
-          const { id: cardId } = await Card.qm.createOne(cardValues);
+          const card = await Card.qm.createOne(cardValues);
 
           // Store mapping for comments import
-          cardIdMapping[focalboardCard.id] = cardId;
+          cardIdMapping[focalboardCard.id] = card.id;
 
           if (creatorPlankaId) {
             stats.cardsWithCreator++;
-          };
+          }
 
           stats.totalCardsImported += 1;
+
+          // Create CREATE_CARD action with original Focalboard timestamp.
+          // We bypass sails.helpers.actions.createOne to avoid triggering
+          // webhooks, sockets, and notifications during bulk import.
+          // userId falls back to actorUser (the importer) if the original
+          // Focalboard creator has no matching Planka account.
+          await Action.qm.createOne({
+            boardId,
+            cardId: card.id,
+            userId: creatorPlankaId || actorUser.id,
+            type: Action.Types.CREATE_CARD,
+            data: {
+              card: { name: card.name },
+              list: { id: list.id, type: list.type, name: list.name },
+            },
+            createdAt: card.createdAt,
+          });
 
           // Assign card members from assignee property
           if (assigneePropertyId && userMapping) {
@@ -210,7 +218,7 @@ module.exports = {
 
                   if (plankaUserId) {
                     await CardMembership.qm.createOne({
-                      cardId,
+                      cardId: card.id,
                       userId: plankaUserId,
                     });
                     hasMembers = true;
@@ -236,7 +244,7 @@ module.exports = {
 
                   if (plankaLabelId) {
                     await CardLabel.qm.createOne({
-                      cardId,
+                      cardId: card.id,
                       labelId: plankaLabelId,
                     });
                   }
@@ -265,7 +273,7 @@ module.exports = {
                   const content = String(rawValue);
 
                   await CustomFieldValue.qm.createOrUpdateOne({
-                    cardId,
+                    cardId: card.id,
                     customFieldGroupId: customFieldGroup.id,
                     customFieldId: plankaCustomFieldId,
                     content,

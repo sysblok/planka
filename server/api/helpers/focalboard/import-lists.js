@@ -38,12 +38,13 @@ module.exports = {
 
     console.log('');
     console.log('--- Creating Lists ---');
-    console.log(`Visible columns: ${effectiveVisibleIds.length}${visibleOptionIds.length === 0 ? ' (fallback to all options)' : ''}`)
+    console.log(`Visible columns: ${effectiveVisibleIds.length}${visibleOptionIds.length === 0 ? ' (fallback to all options)' : ''}`);
 
     const listIdByOptionId = {};
+    const listById = {};
 
     await Promise.all(
-     effectiveVisibleIds.map(async (optionId, index) => {
+      effectiveVisibleIds.map(async (optionId, index) => {
         const option = columnOptions.find((opt) => opt.id === optionId);
 
         if (!option) {
@@ -51,14 +52,15 @@ module.exports = {
           return;
         }
 
-        const { id } = await List.qm.createOne({
+        const list = await List.qm.createOne({
           boardId,
           type: List.Types.ACTIVE,
           position: POSITION_GAP * (index + 1),
           name: option.value,
         });
 
-        listIdByOptionId[optionId] = id;
+        listIdByOptionId[optionId] = list.id;
+        listById[list.id] = list;
         console.log(`  [${index}] Created list: "${option.value}"`);
       }),
     );
@@ -66,19 +68,20 @@ module.exports = {
     console.log(`  ✓ Created ${Object.keys(listIdByOptionId).length} lists`);
 
     // Create an "Unordered" list for cards not in cardOrder or without column
-    const unorderedListName = 'Unordered';
-    const { id: unorderedListId } = await List.qm.createOne({
+    const unorderedList = await List.qm.createOne({
       boardId,
       type: List.Types.ACTIVE,
-      position: POSITION_GAP * (visibleOptionIds.length + 1),
-      name: unorderedListName,
+      position: POSITION_GAP * (effectiveVisibleIds.length + 1),
+      name: 'Unordered',
     });
-    console.log(`Created "${unorderedListName}" list (position: ${POSITION_GAP * (visibleOptionIds.length + 1)})`);
+
+    listById[unorderedList.id] = unorderedList;
+    console.log(`Created "Unordered" list (position: ${unorderedList.position})`);
 
     return {
       listIdByOptionId,
-      unorderedListId,
-      unorderedListName,
+      listById,
+      unorderedList,
     };
   },
 };

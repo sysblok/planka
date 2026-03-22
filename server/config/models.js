@@ -80,8 +80,9 @@ module.exports.models = {
   },
 
   beforeCreate(valuesToSet, proceed) {
-    valuesToSet.createdAt = new Date().toISOString(); // eslint-disable-line no-param-reassign
-
+    if (!valuesToSet.createdAt) {
+      valuesToSet.createdAt = new Date().toISOString(); // eslint-disable-line no-param-reassign
+    }
     proceed();
   },
 
