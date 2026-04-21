@@ -70,6 +70,18 @@ module.exports = {
       type: 'ref',
       description: 'Map of Focalboard property ID to Planka custom field ID',
     },
+    focalboardUrlFieldId: {
+      type: 'ref',
+      description: 'Planka custom field ID for the Focalboard URL field (null if not requested)',
+    },
+    focalboardViewId: {
+      type: 'string',
+      description: 'Focalboard view ID used to construct card URLs',
+    },
+    focalboardBaseUrl: {
+      type: 'string',
+      description: 'Base URL of the Focalboard instance',
+    },
   },
 
   async fn(inputs) {
@@ -86,10 +98,17 @@ module.exports = {
       actorUser,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
+      focalboardUrlFieldId,
+      focalboardViewId,
+      focalboardBaseUrl,
     } = inputs;
 
     console.log('');
     console.log('--- Importing Cards ---');
+
+    console.log(`Focalboard URL field ID: ${focalboardUrlFieldId}`);
+    console.log(`Focalboard view ID: ${focalboardViewId}`);
+    console.log(`Focalboard base URL: ${focalboardBaseUrl}`);
 
     // Build text block lookup by parent ID
     const textBlocksByParentId = {};
@@ -111,6 +130,7 @@ module.exports = {
       cardMembershipsCreated: 0,
       cardsWithCustomFields: 0,
       customFieldValuesCreated: 0,
+      cardsWithFocalboardUrl: 0,
     };
 
     // Mapping of Focalboard card ID to Planka card ID (for comments import)
@@ -288,6 +308,20 @@ module.exports = {
             if (cardHasCustomFields) {
               stats.cardsWithCustomFields += 1;
             }
+          }
+
+          // Create Focalboard URL custom field value
+          if (focalboardUrlFieldId && focalboardBaseUrl && focalboardViewId) {
+            const url = `${focalboardBaseUrl}/${focalboardCard.boardId}/${focalboardViewId}/${focalboardCard.id}`;
+
+            await CustomFieldValue.qm.createOrUpdateOne({
+              cardId: card.id,
+              customFieldGroupId: customFieldGroup.id,
+              customFieldId: focalboardUrlFieldId,
+              content: url,
+            });
+
+            stats.cardsWithFocalboardUrl += 1;
           }
         }),
       );

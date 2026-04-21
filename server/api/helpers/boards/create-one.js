@@ -89,7 +89,12 @@ module.exports = {
     }
 
     if (inputs.import && inputs.import.type === Board.ImportTypes.FOCALBOARD) {
-      await sails.helpers.focalboard.importBoard(board, lists, inputs.import.data, inputs.actorUser);
+      await sails.helpers.focalboard.importBoard.with({
+        board,
+        lists,
+        focalboardData: inputs.import.data,
+        actorUser: inputs.actorUser,
+      });
     }
 
     scoper.board = board;

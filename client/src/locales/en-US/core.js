@@ -91,6 +91,7 @@ export default {
       background: 'Background',
       baseCustomFields_title: 'Base Custom Fields',
       baseGroup: 'Base group',
+      baseUrl: 'Base URL',
       board: 'Board',
       boardActions_title: 'Board Actions',
       boardNotFound_title: 'Board Not Found',

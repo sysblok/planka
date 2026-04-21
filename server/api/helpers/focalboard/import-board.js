@@ -45,6 +45,8 @@ module.exports = {
       dueDatePropertyId,
       assigneePropertyId,
       customFieldProperties,
+      includeFocalboardUrl,
+      focalboardBaseUrl,
     } = inputs.focalboardData;
 
     // Find the Kanban view
@@ -77,6 +79,9 @@ module.exports = {
       console.log('No custom fields selected');
     }
 
+    console.log(`Include Focalboard URL: ${includeFocalboardUrl}`);
+    console.log(`Focalboard base URL: ${focalboardBaseUrl}`);
+
     // =====================================================
     // BUILD USER MAPPING
     // =====================================================
@@ -91,7 +96,7 @@ module.exports = {
       inputs.board.id,
       inputs.board.projectId,
       boardMembers,
-      userMapping
+      userMapping,
     );
 
     // =====================================================
@@ -135,14 +140,17 @@ module.exports = {
 
     let customFieldGroup = null;
     let customFieldIdByFocalboardPropertyId = {};
+    let focalboardUrlFieldId = null;
 
-    if (customFieldProperties && customFieldProperties.length > 0) {
+    if ((customFieldProperties && customFieldProperties.length > 0) || includeFocalboardUrl) {
       const result = await sails.helpers.focalboard.importCustomFields(
         inputs.board.id,
-        customFieldProperties,
+        customFieldProperties || [],
+        includeFocalboardUrl,
       );
       customFieldGroup = result.customFieldGroup;
       customFieldIdByFocalboardPropertyId = result.customFieldIdByFocalboardPropertyId;
+      focalboardUrlFieldId = result.focalboardUrlFieldId;
     }
 
     // =====================================================
@@ -162,6 +170,9 @@ module.exports = {
       inputs.actorUser,
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
+      focalboardUrlFieldId,
+      kanbanView.id,
+      focalboardBaseUrl,
     );
 
     // =====================================================
@@ -197,6 +208,7 @@ module.exports = {
     console.log(`Cards with due date: ${stats.cardsWithDueDate}`);
     console.log(`Cards with custom fields: ${stats.cardsWithCustomFields}`);
     console.log(`Custom field values created: ${stats.customFieldValuesCreated}`);
+    console.log(`Cards with Focalboard URL: ${stats.cardsWithFocalboardUrl}`);
     console.log(`Cards with creator: ${stats.cardsWithCreator}`);
     console.log(`Cards with members: ${stats.cardsWithMembers}`);
     console.log(`Card memberships created: ${stats.cardMembershipsCreated}`);

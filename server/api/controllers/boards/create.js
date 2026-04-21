@@ -228,6 +228,8 @@ module.exports = {
             dueDatePropertyId: mapping.dueDatePropertyId,
             assigneePropertyId: mapping.assigneePropertyId,
             customFieldPropertyIds: mapping.customFieldPropertyIds || [],
+            includeFocalboardUrl: mapping.includeFocalboardUrl || false,
+            focalboardBaseUrl: mapping.focalboardBaseUrl,
           })
           .intercept('invalidFile', () => Errors.INVALID_IMPORT_FILE);
 

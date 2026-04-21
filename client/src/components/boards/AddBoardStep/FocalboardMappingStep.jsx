@@ -13,20 +13,8 @@ import api from '../../../api';
 
 import styles from './FocalboardMappingStep.module.scss';
 
-// Property types that can be used for each mapping
-const COLUMN_TYPES = ['select'];
-const LABEL_TYPES = ['select', 'multiSelect'];
-const DUE_DATE_TYPES = ['date'];
-const ASSIGNEE_TYPES = ['person', 'multiPerson'];
-
 // Supported custom field types (stored as strings in Planka)
 const SUPPORTED_CUSTOM_FIELD_TYPES = ['text', 'url', 'number', 'email', 'phone', 'checkbox'];
-
-// All custom field types to show (excluding column/label types)
-const ALL_CUSTOM_FIELD_TYPES = [
-  'text', 'url', 'number', 'email', 'phone', 'checkbox', 'date',
-  'person', 'multiPerson', 'file', 'createdTime', 'createdBy', 'updatedTime', 'updatedBy',
-];
 
 const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const [t] = useTranslation();
@@ -42,6 +30,8 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
   const [dueDatePropertyId, setDueDatePropertyId] = useState(null);
   const [assigneePropertyId, setAssigneePropertyId] = useState(null);
   const [customFieldPropertyIds, setCustomFieldPropertyIds] = useState([]);
+  const [includeFocalboardUrl, setIncludeFocalboardUrl] = useState(true);
+  const [focalboardBaseUrl, setFocalboardBaseUrl] = useState('');
 
   // Fetch preview data on mount
   useEffect(() => {
@@ -185,7 +175,17 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
     setCustomFieldPropertyIds([]);
   }, []);
 
+  const handleIncludeFocalboardUrlChange = useCallback(() => {
+    setIncludeFocalboardUrl((prev) => !prev);
+  }, []);
+
+  const handleFocalboardBaseUrlChange = useCallback((e) => {
+    setFocalboardBaseUrl(e.target.value);
+  }, []);
+
   const handleSubmit = useCallback(() => {
+    console.log('DEBUG');
+    console.log(focalboardBaseUrl);
     if (!columnPropertyId) return;
 
     // Just call onSelect - ImportStep will handle navigation
@@ -199,9 +199,23 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
         dueDatePropertyId: dueDatePropertyId || undefined,
         assigneePropertyId: assigneePropertyId || undefined,
         customFieldPropertyIds: customFieldPropertyIds.length > 0 ? customFieldPropertyIds : undefined,
+        includeFocalboardUrl,
+        focalboardBaseUrl: includeFocalboardUrl ? focalboardBaseUrl : undefined,
       },
     });
-  }, [file, useBoardTitle, previewData, columnPropertyId, labelPropertyId, dueDatePropertyId, customFieldPropertyIds, onSelect]);
+  }, [
+    file,
+    useBoardTitle,
+    previewData,
+    columnPropertyId,
+    labelPropertyId,
+    dueDatePropertyId,
+    assigneePropertyId,
+    customFieldPropertyIds,
+    includeFocalboardUrl,
+    focalboardBaseUrl,
+    onSelect
+  ]);
 
   // Loading state
   if (isLoading) {
@@ -372,6 +386,24 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
                     </div>
                   );
                 })}
+                <div className={styles.checkboxItem}>
+                <Checkbox
+                  checked={includeFocalboardUrl}
+                  label={<label className={styles.checkboxLabel}>Add focalboard card URL</label>}
+                  onChange={handleIncludeFocalboardUrlChange}
+                />
+              </div>
+              {includeFocalboardUrl && (
+                <>
+                  <div className={styles.label}>
+                    {t('common.baseUrl')} <span className={styles.required}>*</span>
+                  </div><input
+                      className={styles.urlInput}
+                      type="text"
+                      value={focalboardBaseUrl}
+                      onChange={handleFocalboardBaseUrlChange} />
+                </>
+              )}
               </div>
             </div>
           )}
@@ -380,7 +412,7 @@ const FocalboardMappingStep = React.memo(({ file, onSelect, onBack }) => {
             positive
             fluid
             content={t('action.import')}
-            disabled={!columnPropertyId}
+            disabled={!columnPropertyId  || (includeFocalboardUrl && !focalboardBaseUrl.trim())}
             className={styles.submitButton}
           />
         </Form>

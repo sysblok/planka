@@ -7,11 +7,13 @@ const { POSITION_GAP } = require('../../../constants');
 
 /**
  * @description :: Creates Planka custom field group and fields from Focalboard properties.
- *                 Returns the group and field mapping for use during card import.
+ *                 Optionally creates a "Focalboard URL" field for linking back to the source.
+ *                 Returns the group, field mapping, and URL field ID for use during card import.
  */
 
 // Custom field group name in Planka
 const CUSTOM_FIELD_GROUP_NAME = 'Custom fields';
+const FOCALBOARD_URL_FIELD_NAME = 'Focalboard URL';
 
 module.exports = {
   inputs: {
@@ -25,24 +27,36 @@ module.exports = {
       required: true,
       description: 'Array of Focalboard property objects to import as custom fields',
     },
+    includeFocalboardUrl: {
+      type: 'boolean',
+      defaultsTo: false,
+      description: 'Whether to create a "Focalboard URL" custom field for linking back to the source card',
+    },
   },
 
   async fn(inputs) {
-    const { boardId, customFieldProperties } = inputs;
+    const { boardId, customFieldProperties, includeFocalboardUrl } = inputs;
 
     console.log('');
     console.log('--- Creating Custom Fields ---');
 
-    if (!customFieldProperties || customFieldProperties.length === 0) {
+    const hasCustomFields = customFieldProperties && customFieldProperties.length > 0;
+
+    if (!hasCustomFields && !includeFocalboardUrl) {
       console.log('No custom fields to import');
       return {
         customFieldGroup: null,
         customFieldIdByFocalboardPropertyId: {},
+        focalboardUrlFieldId: null,
       };
     }
 
-    console.log(`Custom fields to import: ${customFieldProperties.length}`);
-
+    if (hasCustomFields) {
+      console.log(`Custom fields to import: ${customFieldProperties.length}`);
+    }
+    if (includeFocalboardUrl) {
+      console.log('Will create Focalboard URL field');
+    }
 
     // Step 1: Create CustomFieldGroup for the board
     const customFieldGroup = await CustomFieldGroup.qm.createOne({
@@ -55,25 +69,46 @@ module.exports = {
 
     // Step 2: Create CustomField entries for each configured property
     const customFieldIdByFocalboardPropertyId = {};
+    let nextPosition = 1;
 
-    await Promise.all(
-      customFieldProperties.map(async (focalboardProperty, index) => {
-        const customField = await CustomField.qm.createOne({
-          customFieldGroupId: customFieldGroup.id,
-          position: POSITION_GAP * (index + 1),
-          name: focalboardProperty.name,
-        });
+    if (hasCustomFields) {
+      await Promise.all(
+        customFieldProperties.map(async (focalboardProperty, index) => {
+          const customField = await CustomField.qm.createOne({
+            customFieldGroupId: customFieldGroup.id,
+            position: POSITION_GAP * (index + 1),
+            name: focalboardProperty.name,
+          });
 
-        customFieldIdByFocalboardPropertyId[focalboardProperty.id] = customField.id;
-        console.log(`  Created custom field: "${focalboardProperty.name}" (${focalboardProperty.type})`);
-      }),
-    );
+          customFieldIdByFocalboardPropertyId[focalboardProperty.id] = customField.id;
+          console.log(`  Created custom field: "${focalboardProperty.name}" (${focalboardProperty.type})`);
+        }),
+      );
 
-    console.log(`Total custom fields created: ${Object.keys(customFieldIdByFocalboardPropertyId).length}`);
+      nextPosition = customFieldProperties.length + 1;
+    }
+
+    // Step 3: Create Focalboard URL field if requested
+    let focalboardUrlFieldId = null;
+
+    if (includeFocalboardUrl) {
+      const urlField = await CustomField.qm.createOne({
+        customFieldGroupId: customFieldGroup.id,
+        position: POSITION_GAP * nextPosition,
+        name: FOCALBOARD_URL_FIELD_NAME,
+      });
+
+      focalboardUrlFieldId = urlField.id;
+    }
+
+    const totalCreated = Object.keys(customFieldIdByFocalboardPropertyId).length
+      + (focalboardUrlFieldId ? 1 : 0);
+    console.log(`Total custom fields created: ${totalCreated}`);
 
     return {
       customFieldGroup,
       customFieldIdByFocalboardPropertyId,
+      focalboardUrlFieldId,
     };
   },
 };

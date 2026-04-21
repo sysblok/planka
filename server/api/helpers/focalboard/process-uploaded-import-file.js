@@ -34,6 +34,13 @@ module.exports = {
       type: 'ref',
       description: 'Array of Focalboard property IDs to import as custom fields',
     },
+    includeFocalboardUrl: {
+      type: 'boolean',
+      defaultsTo: false,
+    },
+    focalboardBaseUrl: {
+      type: 'string',
+    },
   },
 
   exits: {
@@ -49,6 +56,8 @@ module.exports = {
       dueDatePropertyId,
       assigneePropertyId,
       customFieldPropertyIds,
+      includeFocalboardUrl,
+      focalboardBaseUrl,
     } = inputs;
 
     const data = await sails.helpers.focalboard
@@ -114,6 +123,8 @@ module.exports = {
       dueDatePropertyId,
       assigneePropertyId,
       customFieldProperties,
+      includeFocalboardUrl,
+      focalboardBaseUrl,
     };
   },
 };
