@@ -27,10 +27,21 @@ module.exports = {
       required: true,
       description: 'Mapping from Focalboard user IDs to Planka user IDs',
     },
+    focalboardUsers: {
+      type: 'ref',
+      required: true,
+      description: 'Array of Focalboard user objects (for username lookup)',
+    },
   },
 
   async fn(inputs) {
-    const { boardId, projectId, focalboardBoardMembers, userMapping } = inputs;
+    const { boardId, projectId, focalboardBoardMembers, userMapping, focalboardUsers } = inputs;
+
+    // Build userId → username lookup
+    const usernameByUserId = {};
+    focalboardUsers.forEach((u) => {
+      usernameByUserId[u.userId] = u.username || u.email || u.userId;
+    });
 
     console.log('');
     console.log('=== Importing Board Members ===');
@@ -40,6 +51,7 @@ module.exports = {
       created: 0,
       skipped: 0,
     };
+    const skippedUsers = [];
 
     for (const fbMember of focalboardBoardMembers) {
       const { userId, schemeAdmin, schemeEditor, schemeViewer, schemeCommenter } = fbMember;
@@ -47,24 +59,17 @@ module.exports = {
       const plankaUserId = userMapping[userId];
 
       if (!plankaUserId) {
-        // console.log(`⊗ Skipping board member - user not found: ${userId}`);
         stats.skipped++;
+        skippedUsers.push(usernameByUserId[userId] || userId);
         continue;
       }
 
-      // Determine role based on Focalboard scheme flags
-      // Priority: Admin > Editor > Viewer
-      let role;
-      let canComment = null;
-
-      if (schemeAdmin || schemeEditor) {
-        role = 'editor';
-      } else if (schemeViewer) {
-        role = 'viewer';
-        canComment = schemeCommenter ? true : false;
-      } else {
-        // Default to editor if no clear role
-        role = 'editor';
+      // Skip members with no rights in Focalboard
+      const hasRights = schemeAdmin || schemeEditor || schemeViewer || schemeCommenter;
+      if (!hasRights) {
+        stats.skipped++;
+        skippedUsers.push(usernameByUserId[userId] || userId);
+        continue;
       }
 
       try {
@@ -72,14 +77,14 @@ module.exports = {
           boardId,
           projectId,
           userId: plankaUserId,
-          role,
-          canComment,
+          role: 'editor',
+          canComment: null,
         }).fetch();
 
-        console.log(`✓ Added board member: ${plankaUserId} (${role})`);
         stats.created++;
       } catch (error) {
         stats.skipped++;
+        skippedUsers.push(usernameByUserId[userId] || userId);
       }
     }
 
@@ -87,6 +92,9 @@ module.exports = {
     console.log('--- Board Members Summary ---');
     console.log(`Created: ${stats.created}`);
     console.log(`Skipped: ${stats.skipped}`);
+    if (skippedUsers.length > 0) {
+      console.log(`Skipped users: ${skippedUsers.join(', ')}`);
+    }
     console.log('');
 
     return stats;

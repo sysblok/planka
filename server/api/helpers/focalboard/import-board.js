@@ -97,6 +97,7 @@ module.exports = {
       inputs.board.projectId,
       boardMembers,
       userMapping,
+      users,
     );
 
     // =====================================================

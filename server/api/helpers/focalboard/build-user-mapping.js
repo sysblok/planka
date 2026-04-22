@@ -120,10 +120,6 @@ module.exports = {
       } else {
         mapping.stats.unmatched++;
         mapping.unmatchedUsers.push(fbUser);
-
-        const displayName = firstname || lastname
-          ? `${firstname} ${lastname}`.trim()
-          : username || email || userId;
       }
     }
 
