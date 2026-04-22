@@ -326,7 +326,7 @@ module.exports = {
         }),
       );
 
-      console.log(`Created ${cards.length} cards in list "${listName}"`);
+      //console.log(`Created ${cards.length} cards in list "${listName}"`);
     }
 
     return { stats, cardIdMapping };

@@ -61,7 +61,7 @@ module.exports = {
 
         listIdByOptionId[optionId] = list.id;
         listById[list.id] = list;
-        console.log(`  [${index}] Created list: "${option.value}"`);
+        // console.log(`  [${index}] Created list: "${option.value}"`);
       }),
     );
 

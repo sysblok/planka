@@ -114,9 +114,7 @@ module.exports = {
           ? `${firstname} ${lastname}`.trim()
           : username || email;
 
-        console.log(
-          `✓ Matched: ${displayName} (${matchMethod}) → Planka user ${plankaUser.id}`
-        );
+        // console.log(`✓ Matched: ${displayName} (${matchMethod}) → Planka user ${plankaUser.id}`);
       } else {
         mapping.stats.unmatched++;
         mapping.unmatchedUsers.push(fbUser);
