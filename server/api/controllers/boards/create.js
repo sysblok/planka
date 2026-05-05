@@ -49,6 +49,10 @@
  *                 type: string
  *                 format: binary
  *                 description: Import file
+*               importMapping:
+ *                 type: string
+ *                 description: JSON object with property mappings for Focalboard import
+ *                 example: '{"columnPropertyId":"...","labelPropertyId":"...","dueDatePropertyId":"...","assigneePropertyId":"...","customFieldPropertyIds":["...","..."]}'
  *               requestId:
  *                 type: string
  *                 maxLength: 128
@@ -139,6 +143,10 @@ module.exports = {
       type: 'string',
       isIn: Object.values(Board.ImportTypes),
     },
+    importMapping: {
+      type: 'json',
+      description: 'Property mappings for Focalboard import: { columnPropertyId, labelPropertyId, dueDatePropertyId, customFieldPropertyIds[] }',
+    },
     requestId: {
       type: 'string',
       isNotEmptyString: true,
@@ -199,6 +207,35 @@ module.exports = {
         boardImport = {
           type: inputs.importType,
           board: trelloBoard,
+        };
+      } else if (inputs.importType === Board.ImportTypes.FOCALBOARD) {
+        let mapping = inputs.importMapping || {};
+
+        if (typeof mapping === 'string') {
+          try {
+            mapping = JSON.parse(mapping);
+          } catch (e) {
+            console.error('Failed to parse importMapping:', e);
+            mapping = {};
+          }
+        }
+
+        const focalboardData = await sails.helpers.focalboard
+          .processUploadedImportFile.with({
+            file,
+            columnPropertyId: mapping.columnPropertyId,
+            labelPropertyId: mapping.labelPropertyId,
+            dueDatePropertyId: mapping.dueDatePropertyId,
+            assigneePropertyId: mapping.assigneePropertyId,
+            customFieldPropertyIds: mapping.customFieldPropertyIds || [],
+            includeFocalboardUrl: mapping.includeFocalboardUrl || false,
+            focalboardBaseUrl: mapping.focalboardBaseUrl,
+          })
+          .intercept('invalidFile', () => Errors.INVALID_IMPORT_FILE);
+
+        boardImport = {
+          type: inputs.importType,
+          data: focalboardData,
         };
       }
     }

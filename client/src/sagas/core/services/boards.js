@@ -16,6 +16,7 @@ import ActionTypes from '../../../constants/ActionTypes';
 import ModalTypes from '../../../constants/ModalTypes';
 
 export function* createBoard(projectId, { import: boardImport, ...data }) {
+
   const localId = yield call(createLocalId);
 
   const nextData = {
@@ -40,22 +41,36 @@ export function* createBoard(projectId, { import: boardImport, ...data }) {
   let boardMemberships;
 
   try {
-    ({
-      item: board,
-      included: { boardMemberships },
-    } = yield boardImport
-      ? call(
-          request,
-          api.createBoardWithImport,
-          projectId,
-          {
-            ...nextData,
-            importType: boardImport.type,
-            importFile: boardImport.file,
-          },
-          localId,
-        )
-      : call(request, api.createBoard, projectId, nextData));
+    if (boardImport) {
+      // Build import payload
+      const importPayload = {
+        ...nextData,
+        importType: boardImport.type,
+        importFile: boardImport.file,
+      };
+
+      // Add mapping for Focalboard imports
+      if (boardImport.type === 'focalboard' && boardImport.mapping) {
+        importPayload.importMapping = JSON.stringify(boardImport.mapping);
+      }
+
+      ({
+        item: board,
+        included: { boardMemberships },
+      } = yield call(
+        request,
+        api.createBoardWithImport,
+        projectId,
+        importPayload,
+        localId,
+      ));
+    } else {
+      ({
+        item: board,
+
+        included: { boardMemberships },
+      } = yield call(request, api.createBoard, projectId, nextData));
+    }
   } catch (error) {
     yield put(actions.createBoard.failure(localId, error));
     return;

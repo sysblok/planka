@@ -22,6 +22,11 @@ const StepTypes = {
   IMPORT: 'IMPORT',
 };
 
+const IMPORT_TYPE_ICONS = {
+  trello: 'trello',
+  focalboard: 'file',
+};
+
 const AddBoardStep = React.memo(({ onClose }) => {
   const dispatch = useDispatch();
   const [t] = useTranslation();
@@ -47,6 +52,17 @@ const AddBoardStep = React.memo(({ onClose }) => {
       return;
     }
 
+    // Transform import data for API
+    if (cleanData.import) {
+      const { type, file, mapping } = cleanData.import;
+      cleanData.import = {
+        type,
+        file,
+        // Include mapping for Focalboard imports
+        ...(mapping && { mapping }),
+      };
+    }
+
     dispatch(entryActions.createBoardInCurrentProject(cleanData));
     onClose();
   }, [onClose, dispatch, data, nameFieldRef]);
@@ -56,6 +72,7 @@ const AddBoardStep = React.memo(({ onClose }) => {
       setData((prevData) => ({
         ...prevData,
         import: nextImport,
+        name: nextImport.boardTitle || prevData.name,
       }));
     },
     [setData],
@@ -84,6 +101,8 @@ const AddBoardStep = React.memo(({ onClose }) => {
     return <ImportStep onSelect={handleImportSelect} onBack={handleImportBack} />;
   }
 
+  const importIconName = data.import ? (IMPORT_TYPE_ICONS[data.import.type] || 'file') : 'arrow down';
+
   return (
     <>
       <Popup.Header>
@@ -111,7 +130,7 @@ const AddBoardStep = React.memo(({ onClose }) => {
               onClick={handleImportClick}
             >
               <Icon
-                name={data.import ? data.import.type : 'arrow down'}
+                name={importIconName}
                 className={styles.importButtonIcon}
               />
               {data.import ? data.import.file.name : t('action.import')}

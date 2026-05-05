@@ -88,6 +88,15 @@ module.exports = {
       await sails.helpers.boards.importFromTrello(board, lists, inputs.import.board);
     }
 
+    if (inputs.import && inputs.import.type === Board.ImportTypes.FOCALBOARD) {
+      await sails.helpers.focalboard.importBoard.with({
+        board,
+        lists,
+        focalboardData: inputs.import.data,
+        actorUser: inputs.actorUser,
+      });
+    }
+
     scoper.board = board;
     scoper.boardMemberships = [boardMembership];
 
