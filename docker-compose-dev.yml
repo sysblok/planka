@@ -9,16 +9,17 @@ services:
     restart: on-failure
     volumes:
       - ./server:/app
-    ports:
-      - 1337:1337
+    # remove host port publish when using traefik
+    #ports:
+    #  - 1337:1337
     environment:
-      - BASE_URL=http://localhost:1337
+      - BASE_URL=https://planka.sysblok.team
       - DATABASE_URL=postgresql://postgres@postgres/planka
       - SECRET_KEY=notsecretkey
 
       # - LOG_LEVEL=warn
 
-      # - TRUST_PROXY=true
+      - TRUST_PROXY=true
       # - MAX_UPLOAD_FILE_SIZE=
       # - TOKEN_EXPIRES_IN=365 # In days
 
@@ -94,16 +95,54 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - proxy
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+
+      # HTTPS API + websocket → Sails (1337)
+      - "traefik.http.routers.planka-dev-api-secure.rule=Host(`${PLANKA_HOST}`) && (PathPrefix(`/api`) || PathPrefix(`/socket.io`))"
+      - "traefik.http.routers.planka-dev-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.planka-dev-api-secure.tls.certresolver=le"
+      - "traefik.http.routers.planka-dev-api-secure.service=planka-dev-api"
+      - "traefik.http.routers.planka-dev-api-secure.priority=100"
+      - "traefik.http.services.planka-dev-api.loadbalancer.server.port=1337"
+
 
   planka-client:
     image: planka-dev
     pull_policy: never
-    command: ["bash", "-c", "npm install && npx vite --host"]
+    command: ["bash", "-c", "npm install && npx vite --host 0.0.0.0 --port 3000 --strictPort"]
     restart: on-failure
     volumes:
       - ./client:/app
-    ports:
-      - 3000:3000
+    #ports:
+    #  - 3000:3000
+    environment:
+      - VITE_SERVER_BASE_URL=https://planka.sysblok.team
+    networks:
+      - proxy
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.planka-dev.rule=Host(`${PLANKA_HOST}`)"
+      - "traefik.http.routers.planka-dev.entrypoints=web"
+      - "traefik.http.routers.planka-dev.middlewares=planka-dev-redirect"
+      - "traefik.http.middlewares.planka-dev-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.planka-dev-redirect.redirectscheme.permanent=true"
+
+      # HTTPS UI → Vite (3000)
+      - "traefik.http.routers.planka-dev-secure.rule=Host(`${PLANKA_HOST}`)"
+      - "traefik.http.routers.planka-dev-secure.entrypoints=websecure"
+      - "traefik.http.routers.planka-dev-secure.tls.certresolver=le"
+      - "traefik.http.routers.planka-dev-secure.service=planka-dev-ui"
+      - "traefik.http.routers.planka-dev-secure.priority=1"
+      - "traefik.http.services.planka-dev-ui.loadbalancer.server.port=3000"
 
   postgres:
     image: postgres:16-alpine
@@ -126,3 +165,8 @@ services:
 
 volumes:
   db-data:
+
+
+networks:
+  proxy:
+    external: true
